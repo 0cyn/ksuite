@@ -1,0 +1,3 @@
+[submodule "binja"]
+	path = binja
+	url = git@github.com:Vector35/binaryninja-api.git
