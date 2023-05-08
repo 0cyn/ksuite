@@ -1,5 +1,5 @@
 //
-// Created by Katherine on 12/19/22.
+// Created by vr1s on 12/19/22.
 //
 
 #ifndef KSUITE_VTABREWRITES_H

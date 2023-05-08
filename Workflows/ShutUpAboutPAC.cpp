@@ -1,5 +1,5 @@
 //
-// Created by Katherine on 12/17/22.
+// Created by vr1s on 12/17/22.
 //
 
 #include "ShutUpAboutPAC.h"
@@ -37,7 +37,7 @@ void ShutUpAboutPAC::FixBrokenSIMD(Ref<AnalysisContext> ctx)
 
     for (const auto& block : llil->GetBasicBlocks())
     {
-        for (size_t insnIndex = block->GetStart(), end = block->GetEnd(); insnIndex < end; ++insnIndex)
+        for ( size_t insnIndex = block->GetStart(), end = block->GetEnd(); insnIndex < end; ++insnIndex )
         {
             auto insn = llil->GetInstruction(insnIndex);
             if (insn.operation != LLIL_SET_REG)

@@ -1,48 +1,11 @@
 //
-// Created by Katherine on 12/17/22.
+// Created by vr1s on 12/17/22.
 //
 
 #ifndef KSUITE_SHUTUPABOUTPAC_H
 #define KSUITE_SHUTUPABOUTPAC_H
 
 #include <binaryninjaapi.h>
-
-#define rn ;
-#define real const
-#define ongod auto
-#define cap false
-#define tru true
-#define fr long
-#define bout int
-#define fucky unsigned
-#define chief main
-#define finna {
-#define tho }
-#define wit (
-#define really )
-#define amirite )
-#define be ==
-#define sussin ?
-#define no !
-#define simpin =
-#define zoomin ++
-#define vibin --
-#define deadass return
-#define yikes break
-#define sussin ?
-#define bussin :
-#define sussy &
-#define mf *
-#define bro if
-#define fam for
-#define cappin ,
-#define ayo switch
-#define W case
-#define L default
-#define draggin [
-#define maldin ]
-#define lesgoo continue
-
 
 using namespace BinaryNinja;
 

@@ -1,12 +1,14 @@
 //
-// Created by Katherine on 12/17/22.
+// Created by vr1s on 12/17/22.
 //
 
 #include <binaryninjaapi.h>
 #include "uitypes.h"
 #include "Plugin.h"
 #include "Workflows/ShutUpAboutPAC.h"
-
+#include "UI/Notifications.h"
+#include "UI/theme/ThemeInjector.h"
+#include "UI/theme/Flattery.h"
 
 extern "C" {
 
@@ -21,6 +23,14 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
 }
 
 BINARYNINJAPLUGIN bool UIPluginInit() {
+
+    Notifications::init();
+    g_addThemeJsonFunctionPointer = ThemeInjector::Inject();
+    typedef void (* fnPtr)(const char*);
+    fnPtr ptr = (fnPtr) g_addThemeJsonFunctionPointer;
+    ptr(flatteryJson.c_str());
+    refreshUserThemes();
+    setActiveTheme("Flattery - Dark");
 
     return true;
 }
