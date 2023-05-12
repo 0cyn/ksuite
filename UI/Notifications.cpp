@@ -6,7 +6,7 @@
 #include <QLayout>
 #include <QApplication>
 #include "ui/sidebar.h"
-#include "RightSideBar.h"
+#include "DockableSidebar.h"
 
 Notifications* Notifications::m_instance = nullptr;
 
@@ -48,9 +48,14 @@ void Notifications::OnContextOpen(UIContext* context)
 {
     for (auto &widget : QApplication::allWidgets()) {
         if (std::string(widget->metaObject()->className()) == "Sidebar") {
+            auto bar = static_cast<Sidebar*>(widget);
+            bar->setContainer(nullptr);
             auto layout = findParentLayout(widget);
-            auto sidebar = new RightSideBar(context->mainWindow()->centralWidget());
-            layout->addWidget(sidebar);
+            auto mgr = new ContextSidebarManager();
+            mgr->m_oldSidebar = widget;
+            mgr->m_targetLayout = layout;
+            mgr->m_context = context;
+            mgr->SetupSidebars();
         }
     }
 }
