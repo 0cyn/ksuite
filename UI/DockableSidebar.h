@@ -17,7 +17,7 @@ class DockableSidebarContentView;
 
 class OrientablePushButton : public QPushButton
 {
-Q_OBJECT
+    Q_OBJECT
 
     friend DockableSidebar;
 
@@ -31,6 +31,8 @@ public:
         VerticalTopToBottom,
         VerticalBottomToTop
     };
+
+    size_t m_idx;
 
     bool m_maybeDragStarted = false;
     bool m_beingDragged = false;
@@ -87,9 +89,12 @@ public:
 
     DockableSidebar(ContextSidebarManager* context, SidebarPos pos, QWidget* parent);
     void AddButton(OrientablePushButton* button);
-    void AddType(SidebarWidgetType* type)
+    void AddType(SidebarWidgetType* type, uint8_t idx = UINT8_MAX)
     {
-        m_containedTypes.push_back(type);
+        if (idx > m_containedTypes.size())
+            m_containedTypes.push_back(type);
+        else
+            m_containedTypes.insert(m_containedTypes.begin()+idx, type);
     }
     void ClearTypes()
     {
@@ -125,15 +130,21 @@ class DockableSidebarContentView : public QWidget {
 public:
     bool m_left = false;
     QVBoxLayout* m_layout;
+    SidebarWidgetType* m_topType;
+    SidebarWidgetType* m_bottomType;
+    SidebarWidgetAndHeader* m_topContents;
+    SidebarWidgetAndHeader* m_bottomContents;
     QSplitter* m_parentSplitter;
     QSplitter* m_splitter;
     bool m_topActive = false;
     bool m_botActive = false;
     // DockableSidebar* m_linkedSidebar;
     UIContext* m_context;
+    ContextSidebarManager* m_sidebarCtx;
     DockableSidebarContentView(QSplitter* parentSplitter, QWidget* parent = nullptr);
 
-    void ActivateWidgetType(SidebarWidgetType* type, bool top);
+    void ActivateWidgetType(SidebarWidgetType* type, bool top, bool reset = false);
+    void SizeCheck();
 };
 
 
@@ -143,9 +154,12 @@ public:
     QHBoxLayout* m_wholeLayout;
     UIContext* m_context;
     QWidget* m_oldSidebar;
+    SidebarWidgetContainer* m_oldContainer;
     QLayout* m_targetLayout;
+    std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_widgets;
+    DockableSidebarContentView* m_leftContentView;
+    DockableSidebarContentView* m_rightContentView;
     OrientablePushButton* m_currentDragTarget;
-    std::map<SidebarWidgetType*, DockableSidebar*> m_sidebarForWidgetType;
     std::unordered_map<SidebarPos, DockableSidebar*> m_sidebarForPos;
     DockableSidebar* SidebarForGlobalPos(QPointF);
     void SetupSidebars();

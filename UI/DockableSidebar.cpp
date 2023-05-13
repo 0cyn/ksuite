@@ -29,6 +29,11 @@ double dist(QPointF p, QPointF q)
     return dist;
 }
 
+bool isInvalidWidget(QWidget* widget)
+{
+    return (std::string(widget->metaObject()->className()) == "SidebarInvalidContextWidget");
+}
+
 DockableSidebar* ContextSidebarManager::SidebarForGlobalPos(QPointF pos)
 {
     auto nearest = m_activeSidebars.at(0);
@@ -55,11 +60,12 @@ void ContextSidebarManager::SetupSidebars()
     pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
     leftSideFrame->setContentsMargins(0,0,0,0);
 
-    auto leftSideContentView = new DockableSidebarContentView(wholeMainViewSplitter, central);
-    leftSideContentView->m_left = true;
-    leftSideContentView->setObjectName("leftContentView");
-    leftSideContentView->setContentsMargins(0, 0, 0, 0);
-    leftSideContentView->m_context = m_context;
+    m_leftContentView = new DockableSidebarContentView(wholeMainViewSplitter, central);
+    m_leftContentView->m_sidebarCtx = this;
+    m_leftContentView->m_left = true;
+    m_leftContentView->setObjectName("leftContentView");
+    m_leftContentView->setContentsMargins(0, 0, 0, 0);
+    m_leftContentView->m_context = m_context;
 
     m_sidebarForPos[TopLeft] = new DockableSidebar(this, TopLeft, leftSideFrame);
     auto leftSidebarLayout = new QVBoxLayout(leftSideFrame);
@@ -72,8 +78,9 @@ void ContextSidebarManager::SetupSidebars()
 
     /* Right */
 
-    auto rightSideContentView = new DockableSidebarContentView(wholeMainViewSplitter, central);
-    rightSideContentView->m_context = m_context;
+    m_rightContentView = new DockableSidebarContentView(wholeMainViewSplitter, central);
+    m_rightContentView->m_sidebarCtx = this;
+    m_rightContentView->m_context = m_context;
 
     auto rightSideFrame = new QFrame(central);
     rightSideFrame->setContentsMargins(0,0,0,0);
@@ -87,7 +94,7 @@ void ContextSidebarManager::SetupSidebars()
     m_sidebarForPos[BottomRight] = new DockableSidebar(this, BottomRight, rightSideFrame);
     rightSidebarLayout->addWidget(m_sidebarForPos[BottomRight]);
 
-    wholeMainViewSplitter->addWidget(leftSideContentView);
+    wholeMainViewSplitter->addWidget(m_leftContentView);
 
     // sorry guys :3
     for (auto child : central->children())
@@ -105,31 +112,35 @@ void ContextSidebarManager::SetupSidebars()
     central->layout()->addWidget(frm);
     m_wholeLayout->addWidget(leftSideFrame);
     wholeMainViewSplitter->setParent(central);
-    wholeMainViewSplitter->addWidget(rightSideContentView);
+    wholeMainViewSplitter->addWidget(m_rightContentView);
     m_wholeLayout->addWidget(wholeMainViewSplitter);
     m_wholeLayout->addWidget(rightSideFrame);
 
-    m_oldSidebar->setParent(nullptr);
+    m_oldSidebar->setVisible(false);
 
-    m_sidebarForWidgetType[new ComponentTreeSidebarWidgetType()] = m_sidebarForPos[TopLeft];
-    m_sidebarForWidgetType[new TypeViewSidebarWidgetType()] = m_sidebarForPos[TopLeft];
-    m_sidebarForWidgetType[new VariableListSidebarWidgetType()] = m_sidebarForPos[TopLeft];
-    m_sidebarForWidgetType[new StackViewSidebarWidgetType()] = m_sidebarForPos[TopLeft];
-    m_sidebarForWidgetType[new StringsViewSidebarWidgetType()] = m_sidebarForPos[TopRight];
-    m_sidebarForWidgetType[new MemoryMapSidebarWidgetType()] = m_sidebarForPos[TopRight];
-    m_sidebarForWidgetType[new TagListSidebarWidgetType()] = m_sidebarForPos[BottomRight];
-    m_sidebarForWidgetType[new CrossReferenceSidebarWidgetType()] = m_sidebarForPos[BottomLeft];
-    m_sidebarForWidgetType[new MiniGraphSidebarWidgetType()] = m_sidebarForPos[BottomLeft];
+    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new ComponentTreeSidebarWidgetType());
+    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new TypeViewSidebarWidgetType());
+    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new StringsViewSidebarWidgetType());
 
-    m_sidebarForPos[TopLeft]->m_contentView = leftSideContentView;
-    m_sidebarForPos[BottomLeft]->m_contentView = leftSideContentView;
-    m_sidebarForPos[TopRight]->m_contentView = rightSideContentView;
-    m_sidebarForPos[BottomRight]->m_contentView = rightSideContentView;
+    m_sidebarForPos[TopRight]->m_containedTypes.push_back(new VariableListSidebarWidgetType());
+    m_sidebarForPos[TopRight]->m_containedTypes.push_back(new StackViewSidebarWidgetType());
+    m_sidebarForPos[TopRight]->m_containedTypes.push_back(new MemoryMapSidebarWidgetType());
+
+    m_sidebarForPos[BottomLeft]->m_containedTypes.push_back(new CrossReferenceSidebarWidgetType());
+    m_sidebarForPos[BottomLeft]->m_containedTypes.push_back(new MiniGraphSidebarWidgetType());
+
+    m_sidebarForPos[BottomRight]->m_containedTypes.push_back(new TagListSidebarWidgetType());
+
+    m_sidebarForPos[TopLeft]->m_contentView = m_leftContentView;
+    m_sidebarForPos[BottomLeft]->m_contentView = m_leftContentView;
+    m_sidebarForPos[TopRight]->m_contentView = m_rightContentView;
+    m_sidebarForPos[BottomRight]->m_contentView = m_rightContentView;
     UpdateTypes();
 }
 
 void ContextSidebarManager::UpdateTypes()
 {
+    m_activeSidebars.clear();
     for (size_t i = 0; i < SidebarPosCount; i++)
     {
         if (auto it = m_sidebarForPos.find(SidebarPos(i)); it != m_sidebarForPos.end())
@@ -137,20 +148,14 @@ void ContextSidebarManager::UpdateTypes()
             auto sidebar = it->second;
             auto replacement = new DockableSidebar(this, sidebar->m_sidebarPos, sidebar->parentWidget());
             replacement->ClearTypes();
-            for (const auto& [type, bar] : m_sidebarForWidgetType)
-            {
-                if (bar == sidebar) {
-                    replacement->AddType(type);
-                    m_sidebarForWidgetType[type] = replacement;
-                }
-            }
+            for (auto type : sidebar->m_containedTypes)
+                replacement->AddType(type);
             replacement->UpdateForTypes();
             replacement->m_contentView = sidebar->m_contentView;
             m_sidebarForPos[sidebar->m_sidebarPos] = replacement;
             sidebar->parentWidget()->layout()->replaceWidget(sidebar, replacement);
-            m_activeSidebars.erase(std::remove(m_activeSidebars.begin(), m_activeSidebars.end(), sidebar), m_activeSidebars.end());
+            sidebar->deleteLater();
             m_activeSidebars.push_back(replacement);
-            delete sidebar;
         }
     }
 }
@@ -354,10 +359,16 @@ void OrientablePushButton::mouseReleaseEvent(QMouseEvent* event)
             auto targetSidebar = m_context->SidebarForGlobalPos(m_mouseMovePos);
             if (targetSidebar)
             {
-                m_context->m_sidebarForWidgetType[m_type] = targetSidebar;
-                // size_t targetIdx = targetSidebar->IdxForGlobalPos(mapToGlobal(pos()));
-                m_context->UpdateTypes();
+                size_t targetIdx = targetSidebar->IdxForGlobalPos(mapToGlobal(pos()));
+                if (m_sidebar != targetSidebar || m_idx != targetIdx)
+                {
+                    m_sidebar->m_containedTypes.erase(
+                            std::remove(m_sidebar->m_containedTypes.begin(), m_sidebar->m_containedTypes.end(), m_type),
+                            m_sidebar->m_containedTypes.end());
+                    targetSidebar->AddType(m_type, targetIdx);
+                }
             }
+            m_context->UpdateTypes();
         }
     }
     QPushButton::mouseReleaseEvent(event);
@@ -369,68 +380,74 @@ DockableSidebarContentView::DockableSidebarContentView(QSplitter* parentSplitter
     m_parentSplitter = parentSplitter;
     m_splitter = new QSplitter(Qt::Orientation::Vertical, this);
     m_splitter->setContentsMargins(0,0,0,0);
+    setContentsMargins(0,0,0,0);
     QGridLayout *layout = new QGridLayout(this);
+    SizeCheck();
     layout->addWidget(m_splitter, 0 , 0);
 }
 
-void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, bool top)
+void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, bool top, bool reset)
 {
-    SidebarWidget* widget;
-    SidebarWidgetAndHeader* contents;
-    if (type->viewSensitive())
+    if (!reset && top && m_topActive && m_topContents)
     {
-        if (m_context->getCurrentViewFrame())
+        if (m_topContents->widget()->title().toStdString() == type->name().toStdString())
         {
-            widget = type->createWidget(m_context->getCurrentViewFrame(), m_context->getCurrentView()->getData());
-            if (!widget)
-                widget = type->createInvalidContextWidget();
-        }
-        else
-        {
-            widget = type->createInvalidContextWidget();
-        }
-        contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
-
-        // Send notifications for initial state
-        if (m_context->getCurrentViewFrame())
-        {
-            widget->notifyViewChanged(m_context->getCurrentViewFrame());
-            /*auto frameIter = m_currentViewLocation.find(m_context->getCurrentViewFrame());
-            if (frameIter != m_currentViewLocation.end())
-            {
-                auto typeIter = frameIter->second.find(m_dataType);
-                if (typeIter != frameIter->second.end())
-                {
-                    widget->notifyViewLocationChanged(typeIter->second.first,
-                                                      typeIter->second.second);
-                    widget->notifyOffsetChanged(typeIter->second.second.getOffset());
-                }
-            }*/
+            m_topContents->setParent(nullptr);
+            m_topContents = nullptr;
+            m_topType = nullptr;
+            m_topActive = false;
+            return;
         }
     }
+    if (!reset && !top && m_botActive && m_bottomContents)
+    {
+        if (m_bottomContents->widget()->title().toStdString() == type->name().toStdString())
+        {
+            //m_bottomContents->deleteLater();
+            m_bottomContents->setParent(nullptr);
+            m_bottomContents = nullptr;
+            m_bottomType = nullptr;
+            m_botActive = false;
+            return;
+        }
+    }
+    if (top)
+        m_topType = type;
     else
+        m_bottomType = type;
+    SidebarWidgetAndHeader* existingWidget = nullptr;
+    auto frameIter = m_sidebarCtx->m_widgets.find(type->viewSensitive() ? m_sidebarCtx->m_context->getCurrentViewFrame() : nullptr);
+    if (frameIter != m_sidebarCtx->m_widgets.end())
     {
-        widget = type->createWidget(nullptr, nullptr);
-        if (!widget)
-            widget = type->createInvalidContextWidget();
-        contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
+        auto dataIter = frameIter->second.find(type->viewSensitive() ? m_sidebarCtx->m_context->getCurrentViewFrame()->getCurrentDataType() : QString());
+        if (dataIter != frameIter->second.end())
+        {
+            auto widgetIter = dataIter->second.find(type);
+            if (widgetIter != dataIter->second.end())
+                existingWidget = widgetIter->second;
+        }
     }
-    if (contents)
+    if (existingWidget)
     {
+        if (top)
+            m_topContents = existingWidget;
+        else
+            m_bottomContents = existingWidget;
+        SizeCheck();
         if (top)
         {
             if (m_topActive)
             {
-                m_splitter->replaceWidget(0, contents);
+                m_splitter->replaceWidget(0, existingWidget);
             }
             else
             {
                 if (m_botActive)
                 {
-                    m_splitter->insertWidget(0, contents);
+                    m_splitter->insertWidget(0, existingWidget);
                 }
                 else
-                    m_splitter->addWidget(contents);
+                    m_splitter->addWidget(existingWidget);
             }
             m_topActive = true;
         }
@@ -440,19 +457,119 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, boo
             {
                 if (m_topActive)
                 {
-                    m_splitter->replaceWidget(1, contents);
+                    m_splitter->replaceWidget(1, existingWidget);
                 }
                 else
-                    m_splitter->addWidget(contents);
+                    m_splitter->addWidget(existingWidget);
             }
             else
             {
-                m_splitter->addWidget(contents);
+                m_splitter->addWidget(existingWidget);
             }
             m_botActive = true;
         }
     }
+    else
+    {
+        SidebarWidget* widget;
+        SidebarWidgetAndHeader* contents;
+        if (type->viewSensitive())
+        {
+            if (m_context->getCurrentViewFrame())
+            {
+                widget = type->createWidget(m_context->getCurrentViewFrame(), m_context->getCurrentView()->getData());
+                if (!widget)
+                    widget = type->createInvalidContextWidget();
+            }
+            else
+            {
+                widget = type->createInvalidContextWidget();
+            }
+            contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
+            m_sidebarCtx->m_widgets[m_sidebarCtx->m_context->getCurrentViewFrame()][m_sidebarCtx->m_context->getCurrentViewFrame()->getCurrentDataType()][type] = contents;
+
+            // Send notifications for initial state
+            if (m_context->getCurrentViewFrame())
+            {
+                widget->notifyViewChanged(m_context->getCurrentViewFrame());
+                /*auto frameIter = m_currentViewLocation.find(m_context->getCurrentViewFrame());
+                if (frameIter != m_currentViewLocation.end())
+                {
+                    auto typeIter = frameIter->second.find(m_dataType);
+                    if (typeIter != frameIter->second.end())
+                    {
+                        widget->notifyViewLocationChanged(typeIter->second.first,
+                                                          typeIter->second.second);
+                        widget->notifyOffsetChanged(typeIter->second.second.getOffset());
+                    }
+                }*/
+            }
+        }
+        else
+        {
+            widget = type->createWidget(nullptr, nullptr);
+            if (!widget)
+                widget = type->createInvalidContextWidget();
+            contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
+        }
+
+        if (contents)
+        {
+            if (top)
+                m_topContents = contents;
+            else
+                m_bottomContents = contents;
+            SizeCheck();
+            if (top)
+            {
+                if (m_topActive)
+                {
+                    m_splitter->replaceWidget(0, contents);
+                }
+                else
+                {
+                    if (m_botActive)
+                    {
+                        m_splitter->insertWidget(0, contents);
+                    }
+                    else
+                        m_splitter->addWidget(contents);
+                }
+                m_topActive = true;
+            }
+            else
+            {
+                if (m_botActive)
+                {
+                    if (m_topActive)
+                    {
+                        m_splitter->replaceWidget(1, contents);
+                    }
+                    else
+                        m_splitter->addWidget(contents);
+                }
+                else
+                {
+                    m_splitter->addWidget(contents);
+                }
+                m_botActive = true;
+            }
+        }
+    }
+
     repaint();
+}
+
+void DockableSidebarContentView::SizeCheck()
+{
+    if (m_topActive || m_botActive) {
+        setMaximumWidth(10000);
+        setMinimumWidth(300);
+        setMinimumWidth(0);
+    }
+    else {
+        setMaximumWidth(0);
+    }
 }
 
 DockableSidebar::DockableSidebar(ContextSidebarManager* context, SidebarPos pos, QWidget* parent)
@@ -489,6 +606,9 @@ void DockableSidebar::AddButton(OrientablePushButton* button)
     button->m_sidebar = this;
     m_buttons.push_back(button);
     button->m_context = m_context;
+    if (parentWidget())
+        parentWidget()->repaint();
+    repaint();
 }
 
 void DockableSidebar::UpdateForTypes()
@@ -504,6 +624,7 @@ void DockableSidebar::UpdateForTypes()
     m_layout->addStretch();
     setLayout(m_layout);
 
+    size_t i = 0;
     for (auto type : m_containedTypes)
     {
         auto button = new OrientablePushButton(type->name(), this);
@@ -513,8 +634,11 @@ void DockableSidebar::UpdateForTypes()
         button->setIcon(QIcon(QPixmap::fromImage(type->icon().inactive)));
         button->m_type = type;
         AddButton(button);
+        button->m_idx = i++;
     }
     repaint();
+    if (parentWidget())
+        parentWidget()->repaint();
 }
 
 void DockableSidebar::ButtonMovingOut(OrientablePushButton* button)
