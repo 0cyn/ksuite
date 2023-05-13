@@ -48,7 +48,7 @@ void Notifications::OnContextOpen(UIContext* context)
 {
     BNLogInfo("%s", __FUNCTION__ );
     for (auto &widget : QApplication::allWidgets()) {
-        if (std::string(widget->metaObject()->className()) == "Sidebar") {
+        if (widget && widget->metaObject() && std::string(widget->metaObject()->className()) == "Sidebar") {
             auto bar = static_cast<Sidebar*>(widget);
             //bar->setContainer(nullptr);
             auto layout = findParentLayout(widget);
@@ -63,6 +63,7 @@ void Notifications::OnContextOpen(UIContext* context)
             m_ctxForSidebar[context]->m_targetLayout = layout;
             m_ctxForSidebar[context]->m_context = context;
             m_ctxForSidebar[context]->SetupSidebars();
+            break;
         }
     }
 }

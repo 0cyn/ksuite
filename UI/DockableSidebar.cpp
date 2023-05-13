@@ -416,10 +416,12 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, boo
     else
         m_bottomType = type;
     SidebarWidgetAndHeader* existingWidget = nullptr;
-    auto frameIter = m_sidebarCtx->m_widgets.find(type->viewSensitive() ? m_sidebarCtx->m_context->getCurrentViewFrame() : nullptr);
+    ViewFrame* currentViewFrame = m_sidebarCtx->m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+    auto frameIter = m_sidebarCtx->m_widgets.find(type->viewSensitive() ? currentViewFrame : nullptr);
     if (frameIter != m_sidebarCtx->m_widgets.end())
     {
-        auto dataIter = frameIter->second.find(type->viewSensitive() ? m_sidebarCtx->m_context->getCurrentViewFrame()->getCurrentDataType() : QString());
+        auto dataIter = frameIter->second.find(type->viewSensitive() ? currentDataType : QString());
         if (dataIter != frameIter->second.end())
         {
             auto widgetIter = dataIter->second.find(type);
@@ -486,7 +488,7 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, boo
                 widget = type->createInvalidContextWidget();
             }
             contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
-            m_sidebarCtx->m_widgets[m_sidebarCtx->m_context->getCurrentViewFrame()][m_sidebarCtx->m_context->getCurrentViewFrame()->getCurrentDataType()][type] = contents;
+            m_sidebarCtx->m_widgets[m_sidebarCtx->m_context->getCurrentViewFrame()][currentDataType][type] = contents;
 
             // Send notifications for initial state
             if (m_context->getCurrentViewFrame())
@@ -564,12 +566,26 @@ void DockableSidebarContentView::SizeCheck()
 {
     if (m_topActive || m_botActive) {
         setMaximumWidth(10000);
-        setMinimumWidth(300);
-        setMinimumWidth(0);
+        setMinimumWidth(350);
     }
     else {
+        setMinimumWidth(0);
         setMaximumWidth(0);
     }
+}
+
+QSize DockableSidebarContentView::sizeHint() const
+{
+    QSize hint;
+    if (m_topActive || m_botActive) {
+        hint = QWidget::sizeHint();
+        hint.setWidth(400);
+    }
+    else {
+        hint = QWidget::sizeHint();
+        hint.setWidth(0);
+    }
+    return hint;
 }
 
 DockableSidebar::DockableSidebar(ContextSidebarManager* context, SidebarPos pos, QWidget* parent)

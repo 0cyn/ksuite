@@ -144,6 +144,7 @@ public:
     DockableSidebarContentView(QSplitter* parentSplitter, QWidget* parent = nullptr);
 
     void ActivateWidgetType(SidebarWidgetType* type, bool top, bool reset = false);
+    QSize sizeHint() const override;
     void SizeCheck();
 };
 
