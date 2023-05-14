@@ -25,6 +25,8 @@ class OrientablePushButton : public QPushButton
     DockableSidebar* m_sidebar;
     DockableSidebar* m_nearest;
 
+    bool m_trashed = false;
+
 public:
     enum Orientation {
         Horizontal,
@@ -104,6 +106,9 @@ public:
     }
     void UpdateForTypes();
 
+    void dropEvent(QDropEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
     void ButtonMovingOut(OrientablePushButton* button);
     size_t IdxForGlobalPos(QPoint);
     void DisplayDropPlaceholderForHeldButton(OrientablePushButton* button, size_t idx);

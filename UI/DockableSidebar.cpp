@@ -94,6 +94,8 @@ void ContextSidebarManager::SetupSidebars()
     m_sidebarForPos[BottomRight] = new DockableSidebar(this, BottomRight, rightSideFrame);
     rightSidebarLayout->addWidget(m_sidebarForPos[BottomRight]);
 
+    wholeMainViewSplitter->setContentsMargins(0,0,0,0);
+    central->setContentsMargins(0,0,0,0);
     wholeMainViewSplitter->addWidget(m_leftContentView);
 
     // sorry guys :3
@@ -290,7 +292,7 @@ void OrientablePushButton::mousePressEvent(QMouseEvent* event)
 
 void OrientablePushButton::mouseMoveEvent(QMouseEvent* event)
 {
-    if (m_sidebar)
+    if (m_sidebar && !m_trashed)
     {
         if (event->buttons() == Qt::LeftButton) {
             if (m_maybeDragStarted)
@@ -299,78 +301,24 @@ void OrientablePushButton::mouseMoveEvent(QMouseEvent* event)
                 m_context->DragStartedWithTarget(this);
                 m_maybeDragStarted = false;
                 raise();
-                m_dragButton = new OrientablePushButton(text(), m_sidebar->parentWidget());
-                m_dragButton->setOrientation(mOrientation);
-                m_dragButton->setIcon(icon());
-                m_sidebar->parentWidget()->parentWidget()->layout()->addWidget(m_dragButton);
-                m_dragButton->setParent(m_sidebar->parentWidget()->parentWidget()->parentWidget());
-                m_dragButton->setFixedWidth(QWidget::width());
-                m_dragButton->setFixedHeight(QWidget::height());
-                m_dragButton->setAutoFillBackground(true);
-                m_sidebar->parentWidget()->parentWidget()->layout()->removeWidget(m_dragButton);
-                m_dragButton->raise();
-                m_dragButton->move(event->globalPosition().toPoint().x() - m_dragButton->mapToGlobal(m_dragButton->pos()).x(),
-                                   event->globalPosition().toPoint().y() - m_dragButton->mapToGlobal(m_dragButton->pos()).y());
-                m_dragButton->m_mousePressPos = event->globalPosition();
-                m_dragButton->m_mouseMovePos = event->globalPosition();
-            }
+                QDrag *drag = new QDrag(m_sidebar);
+                QMimeData *mimeData = new QMimeData;
 
-            auto curPos = mapToGlobal(pos());
-            auto globalPos = event->globalPosition();
-            auto diff = globalPos - m_mouseMovePos;
-            auto newPos = mapFromGlobal(curPos + diff.toPoint());
-            move(newPos.x(), newPos.y());
-            {
-                auto dcurPos = mapToGlobal(m_dragButton->pos());
-                auto ddiff = globalPos - m_dragButton->m_mouseMovePos;
-                auto dnewPos = m_dragButton->mapFromGlobal(dcurPos + ddiff.toPoint());
-                m_dragButton->move(dnewPos.x(), dnewPos.y());
-                m_dragButton->m_mouseMovePos = globalPos;
+                mimeData->setText(m_type->name());
+                drag->setMimeData(mimeData);
+                drag->setPixmap(grab());
+                drag->exec();
+                m_trashed = true;
             }
-
-            auto targetSidebar = m_context->SidebarForGlobalPos(globalPos);
-            if (targetSidebar)
-            {
-                size_t targetIdx = targetSidebar->IdxForGlobalPos(mapToGlobal(pos()));
-                targetSidebar->DisplayDropPlaceholderForHeldButton(this, targetIdx);
-                if (targetSidebar != m_nearest)
-                    m_nearest->RemovePlaceholder();
-                m_nearest = targetSidebar;
-            }
-
-            m_mouseMovePos = globalPos;
         }
+        if (!m_trashed)
+            QPushButton::mouseMoveEvent(event);
     }
-    else
-    {
-        return;
-    }
-
-    QPushButton::mouseMoveEvent(event);
 }
 
 void OrientablePushButton::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (m_sidebar)
-    {
-        if (event->button() == Qt::LeftButton && m_beingDragged) {
-            m_beingDragged = false;
-            m_dragButton->setVisible(false);
-            auto targetSidebar = m_context->SidebarForGlobalPos(m_mouseMovePos);
-            if (targetSidebar)
-            {
-                size_t targetIdx = targetSidebar->IdxForGlobalPos(mapToGlobal(pos()));
-                if (m_sidebar != targetSidebar || m_idx != targetIdx)
-                {
-                    m_sidebar->m_containedTypes.erase(
-                            std::remove(m_sidebar->m_containedTypes.begin(), m_sidebar->m_containedTypes.end(), m_type),
-                            m_sidebar->m_containedTypes.end());
-                    targetSidebar->AddType(m_type, targetIdx);
-                }
-            }
-            m_context->UpdateTypes();
-        }
-    }
+    // m_context->UpdateTypes();
     QPushButton::mouseReleaseEvent(event);
 }
 
@@ -594,22 +542,44 @@ DockableSidebar::DockableSidebar(ContextSidebarManager* context, SidebarPos pos,
     m_sidebarPos = pos;
     setParent(parent);
     setMinimumSize(20, 300);
-    setMouseTracking(true);
 
     QPalette pal = palette();
     pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
     setPalette(pal);
     setAutoFillBackground(true);
+    //setStyleSheet("QWidget {background-color: red;}");
 
     m_layout = new QVBoxLayout();
 
-    m_layout->setContentsMargins(0,0,0,0);
+    //m_layout->setContentsMargins(0,0,0,0);
     m_layout->addStretch();
     setLayout(m_layout);
     m_placeholderButton = nullptr;
 
     m_context->RegisterSidebar(this);
-    raise();
+    setAcceptDrops(true);
+}
+void DockableSidebar::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasFormat("text/plain"))
+        event->acceptProposedAction();
+}
+
+void DockableSidebar::dropEvent(QDropEvent *event)
+{
+    m_context->m_currentDragTarget->m_sidebar->m_containedTypes.erase(
+            std::remove(m_context->m_currentDragTarget->m_sidebar->m_containedTypes.begin(),
+                        m_context->m_currentDragTarget->m_sidebar->m_containedTypes.end(),m_context->m_currentDragTarget->m_type),
+                        m_context->m_currentDragTarget->m_sidebar->m_containedTypes.end());
+    m_containedTypes.push_back(m_context->m_currentDragTarget->m_type);
+    m_context->m_currentDragTarget->m_trashed = true;
+    m_context->m_currentDragTarget->deleteLater();
+    m_context->UpdateTypes();
+}
+
+void DockableSidebar::dragMoveEvent(QDragMoveEvent *event)
+{
+    BNLogError("mov %s", event->mimeData()->text().toStdString().c_str());
 }
 
 void DockableSidebar::AddButton(OrientablePushButton* button)
