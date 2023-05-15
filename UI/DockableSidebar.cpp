@@ -158,6 +158,7 @@ void ContextSidebarManager::UpdateTypes()
             sidebar->parentWidget()->layout()->replaceWidget(sidebar, replacement);
             sidebar->deleteLater();
             m_activeSidebars.push_back(replacement);
+            replacement->HighlightActiveButton();
         }
     }
 }
@@ -165,6 +166,7 @@ void ContextSidebarManager::UpdateTypes()
 OrientablePushButton::OrientablePushButton(DockableSidebar *parent)
         : QPushButton(parent)
 {
+    setCheckable(true);
     setStyleSheet(QString("QPushButton {border: 0px;} "
                           "QPushButton::hover {"
                           "background-color: ") + getThemeColor(SidebarBackgroundColor).darker(140).name()
@@ -184,6 +186,7 @@ OrientablePushButton::OrientablePushButton(DockableSidebar *parent)
 OrientablePushButton::OrientablePushButton(const QString &text, DockableSidebar *parent)
         : QPushButton(text, parent)
 {
+    setCheckable(true);
     setStyleSheet(QString("QPushButton {border: 0px;} "
                           "QPushButton::hover {"
                           "background-color: ") + getThemeColor(SidebarBackgroundColor).darker(140).name()
@@ -200,6 +203,7 @@ OrientablePushButton::OrientablePushButton(const QString &text, DockableSidebar 
 OrientablePushButton::OrientablePushButton(const QString &text, QWidget *parent)
         : QPushButton(text, parent)
 {
+    setCheckable(true);
     setStyleSheet(QString("QPushButton {border: 0px;} "
                           "QPushButton::hover {"
                           "background-color: ") + getThemeColor(SidebarBackgroundColor).darker(140).name()
@@ -214,6 +218,7 @@ OrientablePushButton::OrientablePushButton(const QString &text, QWidget *parent)
 OrientablePushButton::OrientablePushButton(const QIcon &icon, const QString &text, DockableSidebar *parent)
         : QPushButton(icon, text, parent)
 {
+    setCheckable(true);
     setStyleSheet(QString("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).name() +
                           ";} "
                           "QPushButton::hover {"
@@ -232,7 +237,7 @@ QSize OrientablePushButton::sizeHint() const
 {
     QSize sh = QPushButton::sizeHint();
 
-    if (mOrientation != OrientablePushButton::Horizontal)
+    if (m_Orientation != OrientablePushButton::Horizontal)
     {
         sh.transpose();
     }
@@ -248,14 +253,14 @@ void OrientablePushButton::paintEvent(QPaintEvent *event)
     QStyleOptionButton option;
     initStyleOption(&option);
 
-    if (mOrientation == OrientablePushButton::VerticalTopToBottom)
+    if (m_Orientation == OrientablePushButton::VerticalTopToBottom)
     {
         painter.rotate(90);
         painter.translate(0, -1 * width());
         option.rect = option.rect.transposed();
     }
 
-    else if (mOrientation == OrientablePushButton::VerticalBottomToTop)
+    else if (m_Orientation == OrientablePushButton::VerticalBottomToTop)
     {
         painter.rotate(-90);
         painter.translate(-1 * height(), 0);
@@ -267,12 +272,12 @@ void OrientablePushButton::paintEvent(QPaintEvent *event)
 
 OrientablePushButton::Orientation OrientablePushButton::orientation() const
 {
-    return mOrientation;
+    return m_Orientation;
 }
 
 void OrientablePushButton::setOrientation(const OrientablePushButton::Orientation &orientation)
 {
-    mOrientation = orientation;
+    m_Orientation = orientation;
 }
 
 void OrientablePushButton::mousePressEvent(QMouseEvent* event)
@@ -288,6 +293,7 @@ void OrientablePushButton::mousePressEvent(QMouseEvent* event)
     }
 
     QPushButton::mousePressEvent(event);
+    m_sidebar->HighlightActiveButton();
 }
 
 void OrientablePushButton::mouseMoveEvent(QMouseEvent* event)
@@ -385,39 +391,9 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, boo
             m_bottomContents = existingWidget;
         SizeCheck();
         if (top)
-        {
-            if (m_topActive)
-            {
-                m_splitter->replaceWidget(0, existingWidget);
-            }
-            else
-            {
-                if (m_botActive)
-                {
-                    m_splitter->insertWidget(0, existingWidget);
-                }
-                else
-                    m_splitter->addWidget(existingWidget);
-            }
-            m_topActive = true;
-        }
+            SetTopWidget(existingWidget);
         else
-        {
-            if (m_botActive)
-            {
-                if (m_topActive)
-                {
-                    m_splitter->replaceWidget(1, existingWidget);
-                }
-                else
-                    m_splitter->addWidget(existingWidget);
-            }
-            else
-            {
-                m_splitter->addWidget(existingWidget);
-            }
-            m_botActive = true;
-        }
+            SetBottomWidget(existingWidget);
     }
     else
     {
@@ -442,17 +418,6 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, boo
             if (m_context->getCurrentViewFrame())
             {
                 widget->notifyViewChanged(m_context->getCurrentViewFrame());
-                /*auto frameIter = m_currentViewLocation.find(m_context->getCurrentViewFrame());
-                if (frameIter != m_currentViewLocation.end())
-                {
-                    auto typeIter = frameIter->second.find(m_dataType);
-                    if (typeIter != frameIter->second.end())
-                    {
-                        widget->notifyViewLocationChanged(typeIter->second.first,
-                                                          typeIter->second.second);
-                        widget->notifyOffsetChanged(typeIter->second.second.getOffset());
-                    }
-                }*/
             }
         }
         else
@@ -465,49 +430,56 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType* type, boo
 
         if (contents)
         {
-            if (top)
-                m_topContents = contents;
-            else
-                m_bottomContents = contents;
-            SizeCheck();
-            if (top)
-            {
-                if (m_topActive)
-                {
-                    m_splitter->replaceWidget(0, contents);
-                }
-                else
-                {
-                    if (m_botActive)
-                    {
-                        m_splitter->insertWidget(0, contents);
-                    }
-                    else
-                        m_splitter->addWidget(contents);
-                }
-                m_topActive = true;
-            }
-            else
-            {
-                if (m_botActive)
-                {
-                    if (m_topActive)
-                    {
-                        m_splitter->replaceWidget(1, contents);
-                    }
-                    else
-                        m_splitter->addWidget(contents);
-                }
-                else
-                {
-                    m_splitter->addWidget(contents);
-                }
-                m_botActive = true;
-            }
+           if (top)
+               SetTopWidget(contents);
+           else
+               SetBottomWidget(contents);
         }
     }
 
     repaint();
+}
+
+
+void DockableSidebarContentView::SetTopWidget(SidebarWidgetAndHeader * widget)
+{
+    m_topContents = widget;
+    if (m_topActive)
+    {
+        if (widget != m_splitter->widget(0))
+            m_splitter->replaceWidget(0, widget);
+    }
+    else
+    {
+        if (m_botActive)
+        {
+            m_splitter->insertWidget(0, widget);
+        }
+        else
+            m_splitter->addWidget(widget);
+    }
+    m_topActive = true;
+    SizeCheck();
+}
+void DockableSidebarContentView::SetBottomWidget(SidebarWidgetAndHeader * widget)
+{
+    m_bottomContents = widget;
+    if (m_botActive)
+    {
+        if (m_topActive)
+        {
+            if (widget != m_splitter->widget(1))
+                m_splitter->replaceWidget(1, widget);
+        }
+        else if (widget != m_splitter->widget(0))
+            m_splitter->replaceWidget(0, widget);
+    }
+    else
+    {
+        m_splitter->addWidget(widget);
+    }
+    m_botActive = true;
+    SizeCheck();
 }
 
 void DockableSidebarContentView::SizeCheck()
@@ -571,7 +543,8 @@ void DockableSidebar::dropEvent(QDropEvent *event)
             std::remove(m_context->m_currentDragTarget->m_sidebar->m_containedTypes.begin(),
                         m_context->m_currentDragTarget->m_sidebar->m_containedTypes.end(),m_context->m_currentDragTarget->m_type),
                         m_context->m_currentDragTarget->m_sidebar->m_containedTypes.end());
-    m_containedTypes.push_back(m_context->m_currentDragTarget->m_type);
+    size_t targetIdx = IdxForGlobalPos(mapToGlobal(event->position()).toPoint());
+    AddType(m_context->m_currentDragTarget->m_type, targetIdx);
     m_context->m_currentDragTarget->m_trashed = true;
     m_context->m_currentDragTarget->deleteLater();
     m_context->UpdateTypes();
@@ -579,7 +552,9 @@ void DockableSidebar::dropEvent(QDropEvent *event)
 
 void DockableSidebar::dragMoveEvent(QDragMoveEvent *event)
 {
-    BNLogError("mov %s", event->mimeData()->text().toStdString().c_str());
+    size_t targetIdx = IdxForGlobalPos(mapToGlobal(event->position()).toPoint());
+    DisplayDropPlaceholderForHeldButton(m_context->m_currentDragTarget, targetIdx);
+    //BNLogInfo("%d %d", mapToGlobal(event->position()).toPoint().x(), mapToGlobal(event->position()).toPoint().y());
 }
 
 void DockableSidebar::AddButton(OrientablePushButton* button)
@@ -631,17 +606,16 @@ void DockableSidebar::ButtonMovingOut(OrientablePushButton* button)
 {
     m_layout->removeWidget(button);
     m_buttons.erase(std::remove(m_buttons.begin(), m_buttons.end(), button), m_buttons.end());
+    HighlightActiveButton();
 }
 
 
 size_t DockableSidebar::IdxForGlobalPos(QPoint pos)
 {
     size_t idx = 0;
-    //BNLogInfo("%d %d", pos.x(), pos.y());
     for (auto btn : m_buttons)
     {
         auto globPos = btn->mapToGlobal(btn->pos());
-        //BNLogInfo("idx %d::> %d %d", idx, globPos.x(), globPos.y());
         if (globPos.y() > pos.y())
             return idx;
         idx++;
@@ -656,6 +630,7 @@ void DockableSidebar::DisplayDropPlaceholderForHeldButton(OrientablePushButton* 
     if (m_placeholderButton)
     {
         m_layout->removeWidget(m_placeholderButton);
+        m_placeholderButton->setVisible(false);
     }
     m_placeholderButton = new QWidget();
     m_placeholderButton->setMouseTracking(false);
@@ -672,4 +647,21 @@ void DockableSidebar::RemovePlaceholder()
     }
 }
 
+void DockableSidebar::HighlightActiveButton()
+{
+    if (!m_contentView)
+        return;
+    for (auto button : m_buttons)
+    {
+        if (button->m_type == m_contentView->m_topType) {
+            button->setChecked(true);
+            break;
+        }
+        if (button->m_type == m_contentView->m_bottomType) {
+            button->setChecked(true);
+            break;
+        }
+        button->setChecked(false);
+    }
+}
 

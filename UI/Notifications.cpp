@@ -46,7 +46,6 @@ void Notifications::init()
 
 void Notifications::OnContextOpen(UIContext* context)
 {
-    BNLogInfo("%s", __FUNCTION__ );
     for (auto &widget : QApplication::allWidgets()) {
         if (widget && widget->metaObject() && std::string(widget->metaObject()->className()) == "Sidebar") {
             auto bar = static_cast<Sidebar*>(widget);
@@ -70,12 +69,10 @@ void Notifications::OnContextOpen(UIContext* context)
 
 void Notifications::OnContextClose(UIContext* context)
 {
-    BNLogInfo("%s", __FUNCTION__ );
 }
 
 void Notifications::OnViewChange(UIContext *context, ViewFrame *frame, const QString &type)
 {
-    BNLogInfo("%s", __FUNCTION__ );
     auto ctx = m_ctxForSidebar[context];
     ctx->m_oldContainer->setVisible(false);
     if (ctx->m_leftContentView)

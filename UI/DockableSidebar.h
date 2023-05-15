@@ -60,7 +60,7 @@ protected:
     void paintEvent(QPaintEvent *event);
 
 private:
-    Orientation mOrientation = Horizontal;
+    Orientation m_Orientation = Horizontal;
 };
 
 enum SidebarPos {
@@ -113,6 +113,7 @@ public:
     size_t IdxForGlobalPos(QPoint);
     void DisplayDropPlaceholderForHeldButton(OrientablePushButton* button, size_t idx);
     void RemovePlaceholder();
+    void HighlightActiveButton();
 };
 
 
@@ -147,6 +148,8 @@ public:
     UIContext* m_context;
     ContextSidebarManager* m_sidebarCtx;
     DockableSidebarContentView(QSplitter* parentSplitter, QWidget* parent = nullptr);
+    void SetTopWidget(SidebarWidgetAndHeader * widget);
+    void SetBottomWidget(SidebarWidgetAndHeader * widget);
 
     void ActivateWidgetType(SidebarWidgetType* type, bool top, bool reset = false);
     QSize sizeHint() const override;
