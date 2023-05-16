@@ -148,6 +148,47 @@ void ContextSidebarManager::UpdateTypes()
     }
 }
 
+void ContextSidebarManager::DeactivateType(SidebarWidgetType* type)
+{
+    m_leftContentView->DeactivateWidgetType(type);
+    m_rightContentView->DeactivateWidgetType(type);
+}
+
+SidebarWidgetAndHeader* ContextSidebarManager::getExistingWidget(SidebarWidgetType* type)
+{
+    SidebarWidgetAndHeader *existingWidget = nullptr;
+    ViewFrame *currentViewFrame = m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+
+    auto frameIter = m_widgets.find(type->viewSensitive() ? currentViewFrame : nullptr);
+    if (frameIter != m_widgets.end())
+    {
+        auto dataIter = frameIter->second.find(type->viewSensitive() ? currentDataType : QString());
+        if (dataIter != frameIter->second.end())
+        {
+            auto widgetIter = dataIter->second.find(type);
+            if (widgetIter != dataIter->second.end())
+                existingWidget = widgetIter->second;
+        }
+    }
+    return existingWidget;
+}
+
+
+void ContextSidebarManager::setExistingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents)
+{
+    ViewFrame *currentViewFrame = m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+    m_widgets[currentViewFrame][currentDataType][type] = contents;
+}
+
+void ContextSidebarManager::deleteExistingWidget(SidebarWidgetType* type)
+{
+    ViewFrame *currentViewFrame = m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+    m_widgets[m_context->getCurrentViewFrame()][currentDataType].erase(type);
+}
+
 DragAcceptingSplitter::DragAcceptingSplitter(ContextSidebarManager* context, QWidget* parent)
     : QSplitter(parent), m_context(context)
 {
@@ -162,59 +203,44 @@ void DragAcceptingSplitter::dragEnterEvent(QDragEnterEvent *event)
 
 void DragAcceptingSplitter::dropEvent(QDropEvent *event)
 {
-    auto type = m_context->m_currentDragTarget->m_type;
-    m_context->m_leftContentView->DeactivateWidgetType(type);
-    m_context->m_rightContentView->DeactivateWidgetType(type);
+    auto type = m_context->dragTarget()->getType();
+    m_context->DeactivateType(type);
     m_context->UpdateTypes();
 
-    SidebarWidgetAndHeader *existingWidget = nullptr;
-    ViewFrame *currentViewFrame = m_context->m_context->getCurrentViewFrame();
-    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
-
-    auto frameIter = m_context->m_widgets.find(type->viewSensitive() ? currentViewFrame : nullptr);
-    if (frameIter != m_context->m_widgets.end())
-    {
-        auto dataIter = frameIter->second.find(type->viewSensitive() ? currentDataType : QString());
-        if (dataIter != frameIter->second.end())
-        {
-            auto widgetIter = dataIter->second.find(type);
-            if (widgetIter != dataIter->second.end())
-                existingWidget = widgetIter->second;
-        }
-    }
+    SidebarWidgetAndHeader *existingWidget = m_context->getExistingWidget(type);
     if (existingWidget)
-    {
-        m_context->m_widgets[m_context->m_context->getCurrentViewFrame()][currentDataType].erase(type);
-    }
+        m_context->deleteExistingWidget(type);
+
     SidebarWidget *widget;
     SidebarWidgetAndHeader *contents;
     if (type->viewSensitive())
     {
-        if (m_context->m_context->getCurrentViewFrame())
+        if (m_context->uiContext()->getCurrentViewFrame())
         {
-            widget = type->createWidget(m_context->m_context->getCurrentViewFrame(), m_context->m_context->getCurrentView()->getData());
+            widget = type->createWidget(m_context->uiContext()->getCurrentViewFrame(), m_context->uiContext()->getCurrentView()->getData());
             if (!widget)
                 widget = type->createInvalidContextWidget();
         } else
             widget = type->createInvalidContextWidget();
-        contents = new SidebarWidgetAndHeader(widget, m_context->m_context->getCurrentViewFrame());
+        contents = new SidebarWidgetAndHeader(widget, m_context->uiContext()->getCurrentViewFrame());
 
         // Send notifications for initial state
-        if (m_context->m_context->getCurrentViewFrame())
-            widget->notifyViewChanged(m_context->m_context->getCurrentViewFrame());
-    } else
+        if (m_context->uiContext()->getCurrentViewFrame())
+            widget->notifyViewChanged(m_context->uiContext()->getCurrentViewFrame());
+    }
+    else
     {
         widget = type->createWidget(nullptr, nullptr);
         if (!widget)
             widget = type->createInvalidContextWidget();
-        contents = new SidebarWidgetAndHeader(widget, m_context->m_context->getCurrentViewFrame());
+        contents = new SidebarWidgetAndHeader(widget, m_context->uiContext()->getCurrentViewFrame());
     }
 
     if (contents)
     {
         //contents->setParent(nullptr);
         auto globPos = mapToGlobal(event->position()).toPoint();
-        contents->setGeometry(globPos.x(), globPos.y(), 350, m_context->m_context->mainWindow()->height());
+        contents->setGeometry(globPos.x(), globPos.y(), 350, m_context->uiContext()->mainWindow()->height());
         m_context->WidgetStartedFloating(type, contents);
         contents->show();
     }
@@ -222,41 +248,13 @@ void DragAcceptingSplitter::dropEvent(QDropEvent *event)
 }
 
 OrientablePushButton::OrientablePushButton(DockableSidebar *parent)
-        : QPushButton(parent)
+        : OrientablePushButton("", parent)
 {
-    setCheckable(true);
-    setStyleSheet(QString("QPushButton {border: 0px;} "
-                          "QPushButton::hover {"
-                          "background-color: ") + getThemeColor(SidebarBackgroundColor).darker(140).name()
-                  + ";}");
-    setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-    QPalette pal = palette();
-    pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
-    if (parent)
-        setOrientation((parent->m_sidebarPos == TopLeft || parent->m_sidebarPos == BottomLeft)
-                       ? OrientablePushButton::VerticalBottomToTop : OrientablePushButton::VerticalTopToBottom);
-    else
-        setOrientation(OrientablePushButton::VerticalBottomToTop); // placeholder w/ no content doesn't matter :D
-    setPalette(pal);
-
-    m_sidebar = parent;
 }
 
 OrientablePushButton::OrientablePushButton(const QString &text, DockableSidebar *parent)
-        : QPushButton(text, parent)
+        : OrientablePushButton(text, qobject_cast<QWidget*>(parent))
 {
-    setCheckable(true);
-    setStyleSheet(QString("QPushButton {border: 0px;} "
-                          "QPushButton::hover {"
-                          "background-color: ") + getThemeColor(SidebarBackgroundColor).darker(140).name()
-                  + ";}");
-    setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-    QPalette pal = palette();
-    pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
-    setOrientation((parent->m_sidebarPos == TopLeft || parent->m_sidebarPos == BottomLeft)
-                   ? OrientablePushButton::VerticalBottomToTop : OrientablePushButton::VerticalTopToBottom);
-    setPalette(pal);
-
     m_sidebar = parent;
 }
 
@@ -318,7 +316,8 @@ void OrientablePushButton::paintEvent(QPaintEvent *event)
         painter.rotate(90);
         painter.translate(0, -1 * width());
         option.rect = option.rect.transposed();
-    } else if (m_Orientation == OrientablePushButton::VerticalBottomToTop)
+    }
+    else if (m_Orientation == OrientablePushButton::VerticalBottomToTop)
     {
         painter.rotate(-90);
         painter.translate(-1 * height(), 0);
@@ -326,11 +325,6 @@ void OrientablePushButton::paintEvent(QPaintEvent *event)
     }
 
     painter.drawControl(QStyle::CE_PushButton, option);
-}
-
-OrientablePushButton::Orientation OrientablePushButton::orientation() const
-{
-    return m_Orientation;
 }
 
 void OrientablePushButton::setOrientation(const OrientablePushButton::Orientation &orientation)
@@ -440,21 +434,7 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
     else
         m_bottomType = type;
 
-    SidebarWidgetAndHeader *existingWidget = nullptr;
-    ViewFrame *currentViewFrame = m_sidebarCtx->m_context->getCurrentViewFrame();
-    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
-
-    auto frameIter = m_sidebarCtx->m_widgets.find(type->viewSensitive() ? currentViewFrame : nullptr);
-    if (frameIter != m_sidebarCtx->m_widgets.end())
-    {
-        auto dataIter = frameIter->second.find(type->viewSensitive() ? currentDataType : QString());
-        if (dataIter != frameIter->second.end())
-        {
-            auto widgetIter = dataIter->second.find(type);
-            if (widgetIter != dataIter->second.end())
-                existingWidget = widgetIter->second;
-        }
-    }
+    SidebarWidgetAndHeader *existingWidget = m_sidebarCtx->getExistingWidget(type);
     if (existingWidget)
     {
         if (top)
@@ -481,7 +461,7 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
             } else
                 widget = type->createInvalidContextWidget();
             contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
-            m_sidebarCtx->m_widgets[m_sidebarCtx->m_context->getCurrentViewFrame()][currentDataType][type] = contents;
+            m_sidebarCtx->setExistingWidget(type, contents);
 
             // Send notifications for initial state
             if (m_context->getCurrentViewFrame())
@@ -622,26 +602,25 @@ void DockableSidebar::dragEnterEvent(QDragEnterEvent *event)
 
 void DockableSidebar::dropEvent(QDropEvent *event)
 {
-    m_context->m_currentDragTarget->m_sidebar->RemoveType(m_context->m_currentDragTarget->m_type);
+    m_context->dragTarget()->m_sidebar->RemoveType(m_context->dragTarget()->m_type);
     size_t targetIdx = IdxForGlobalPos(mapToGlobal(event->position()).toPoint());
-    AddType(m_context->m_currentDragTarget->m_type, targetIdx);
+    AddType(m_context->dragTarget()->m_type, targetIdx);
 
-    if (m_context->m_currentDragTarget->isChecked())
+    if (m_context->dragTarget()->isChecked())
     {
-        m_context->m_leftContentView->DeactivateWidgetType(m_context->m_currentDragTarget->m_type);
-        m_context->m_rightContentView->DeactivateWidgetType(m_context->m_currentDragTarget->m_type);
-        m_contentView->ActivateWidgetType(m_context->m_currentDragTarget->m_type,
+        m_context->DeactivateType(m_context->dragTarget()->getType());
+        m_contentView->ActivateWidgetType(m_context->dragTarget()->getType(),
                                           (m_sidebarPos == TopLeft || m_sidebarPos == TopRight));
     }
-    m_context->m_currentDragTarget->m_trashed = true;
-    m_context->m_currentDragTarget->deleteLater();
+    m_context->dragTarget()->m_trashed = true;
+    m_context->dragTarget()->deleteLater();
     m_context->UpdateTypes();
 }
 
 void DockableSidebar::dragMoveEvent(QDragMoveEvent *event)
 {
     size_t targetIdx = IdxForGlobalPos(mapToGlobal(event->position()).toPoint());
-    DisplayDropPlaceholderForHeldButton(m_context->m_currentDragTarget, targetIdx);
+    DisplayDropPlaceholderForHeldButton(m_context->dragTarget(), targetIdx);
 }
 
 void DockableSidebar::dragLeaveEvent(QDragLeaveEvent *event)
@@ -767,13 +746,13 @@ void DockableSidebar::HighlightActiveButton()
 
     for (auto button: m_buttons)
     {
-        if (button->m_type == m_contentView->m_topType)
+        if (button->m_type == m_contentView->topType())
         {
             button->setChecked(true);
             button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).darker(140).name() + ";}");
             continue;
         }
-        if (button->m_type == m_contentView->m_bottomType)
+        if (button->m_type == m_contentView->bottomType())
         {
             button->setChecked(true);
             button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).darker(140).name() + ";}");

@@ -56,11 +56,7 @@ void Notifications::OnContextOpen(UIContext* context)
             junk->setFixedSize(0, 0);
             bar->container()->setParent(junk);
             bar->container()->setVisible(false);
-            m_ctxForSidebar[context] = new ContextSidebarManager();
-            m_ctxForSidebar[context]->m_oldContainer = bar->container();
-            m_ctxForSidebar[context]->m_oldSidebar = widget;
-            m_ctxForSidebar[context]->m_targetLayout = layout;
-            m_ctxForSidebar[context]->m_context = context;
+            m_ctxForSidebar[context] = new ContextSidebarManager(bar->container(), widget, layout, context);
             m_ctxForSidebar[context]->SetupSidebars();
             break;
         }
@@ -74,21 +70,7 @@ void Notifications::OnContextClose(UIContext* context)
 void Notifications::OnViewChange(UIContext *context, ViewFrame *frame, const QString &type)
 {
     auto ctx = m_ctxForSidebar[context];
-    ctx->m_oldContainer->setVisible(false);
-    if (ctx->m_leftContentView)
-    {
-        if (ctx->m_leftContentView->m_topActive)
-            ctx->m_leftContentView->ActivateWidgetType(ctx->m_leftContentView->m_topType, true, true);
-        if (ctx->m_leftContentView->m_botActive)
-            ctx->m_leftContentView->ActivateWidgetType(ctx->m_leftContentView->m_bottomType, false, true);
-    }
-    if (ctx->m_rightContentView)
-    {
-        if (ctx->m_rightContentView->m_topActive)
-            ctx->m_rightContentView->ActivateWidgetType(ctx->m_rightContentView->m_topType, true, true);
-        if (ctx->m_rightContentView->m_botActive)
-            ctx->m_rightContentView->ActivateWidgetType(ctx->m_rightContentView->m_bottomType, false, true);
-    }
+    ctx->ResetAllWidgets();
     ctx->UpdateTypes();
 }
 

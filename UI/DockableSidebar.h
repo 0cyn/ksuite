@@ -19,6 +19,14 @@ class OrientablePushButton : public QPushButton
 {
     Q_OBJECT
 
+public:
+    enum Orientation {
+        Horizontal,
+        VerticalTopToBottom,
+        VerticalBottomToTop
+    };
+private:
+
     friend DockableSidebar;
 
     ContextSidebarManager* m_context;
@@ -26,13 +34,6 @@ class OrientablePushButton : public QPushButton
     DockableSidebar* m_nearest;
 
     bool m_trashed = false;
-
-public:
-    enum Orientation {
-        Horizontal,
-        VerticalTopToBottom,
-        VerticalBottomToTop
-    };
 
     size_t m_idx;
 
@@ -43,25 +44,25 @@ public:
     QPointF m_mouseMovePos;
     OrientablePushButton* m_dragButton;
     SidebarWidgetType* m_type;
+    Orientation m_Orientation = Horizontal;
 
+public:
     OrientablePushButton(DockableSidebar * parent = nullptr);
     OrientablePushButton(const QString & text, DockableSidebar *parent = nullptr);
     OrientablePushButton(const QString & text, QWidget *parent = nullptr);
     OrientablePushButton(const QIcon & icon, const QString & text, DockableSidebar *parent = nullptr);
 
-    QSize sizeHint() const;
+    SidebarWidgetType* getType() const { return m_type; }
 
-    OrientablePushButton::Orientation orientation() const;
+    OrientablePushButton::Orientation orientation() const { return m_Orientation; };
     void setOrientation(const OrientablePushButton::Orientation &orientation);
+
+    QSize sizeHint() const;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
 
-protected:
     void paintEvent(QPaintEvent *event);
-
-private:
-    Orientation m_Orientation = Horizontal;
 };
 
 enum SidebarPos {
@@ -152,7 +153,6 @@ class DockableSidebarContentView : public QWidget {
 
     Q_OBJECT
 
-public:
     bool m_left = false;
     QVBoxLayout* m_layout;
     SidebarWidgetType* m_topType;
@@ -166,9 +166,15 @@ public:
     // DockableSidebar* m_linkedSidebar;
     UIContext* m_context;
     ContextSidebarManager* m_sidebarCtx;
+
+public:
     DockableSidebarContentView(ContextSidebarManager* sidebarContext, UIContext* context, QSplitter* parentSplitter, bool left, QWidget* parent = nullptr);
     void SetTopWidget(SidebarWidgetAndHeader * widget);
     void SetBottomWidget(SidebarWidgetAndHeader * widget);
+    bool topActive() const { return m_topActive; };
+    bool bottomActive() const { return m_botActive; };
+    SidebarWidgetType* topType() { return m_topType; };
+    SidebarWidgetType* bottomType() { return m_bottomType; };
 
     void ActivateWidgetType(SidebarWidgetType* type, bool top, bool reset = false);
     void DeactivateWidgetType(SidebarWidgetType* type);
@@ -178,7 +184,6 @@ public:
 
 
 class ContextSidebarManager {
-public:
     std::vector<DockableSidebar*> m_activeSidebars;
     QHBoxLayout* m_wholeLayout;
     UIContext* m_context;
@@ -191,13 +196,25 @@ public:
     OrientablePushButton* m_currentDragTarget;
     std::unordered_map<SidebarPos, DockableSidebar*> m_sidebarForPos;
     std::map<SidebarWidgetType*, SidebarWidgetAndHeader*> m_floatingWidgets;
+public:
+    ContextSidebarManager(SidebarWidgetContainer* oldContainer, QWidget* oldSidebar, QLayout* oldLayout, UIContext* context)
+        : m_oldContainer(oldContainer), m_oldSidebar(oldSidebar), m_targetLayout(oldLayout), m_context(context)
+    {}
+    void DeactivateType(SidebarWidgetType* type);
     DockableSidebar* SidebarForGlobalPos(QPointF);
     void SetupSidebars();
     void UpdateTypes();
+
+    SidebarWidgetAndHeader* getExistingWidget(SidebarWidgetType* type);
+    void deleteExistingWidget(SidebarWidgetType* type);
+    void setExistingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents);
+
+    UIContext* uiContext() { return m_context; }
     void RegisterSidebar(DockableSidebar* sidebar)
     {
         m_activeSidebars.push_back(sidebar);
     }
+    OrientablePushButton* dragTarget() { return m_currentDragTarget; };
     void DragStartedWithTarget(OrientablePushButton* target)
     {
         m_currentDragTarget = target;
@@ -225,7 +242,24 @@ public:
         m_floatingWidgets[type]->setFocus(Qt::OtherFocusReason);
         m_floatingWidgets[type]->raise();
     }
-
+    void ResetAllWidgets()
+    {
+        m_oldContainer->setVisible(false);
+        if (m_leftContentView)
+        {
+            if (m_leftContentView->topActive())
+                m_leftContentView->ActivateWidgetType(m_leftContentView->topType(), true, true);
+            if (m_leftContentView->bottomActive())
+                m_leftContentView->ActivateWidgetType(m_leftContentView->bottomType(), false, true);
+        }
+        if (m_rightContentView)
+        {
+            if (m_rightContentView->topActive())
+                m_rightContentView->ActivateWidgetType(m_rightContentView->topType(), true, true);
+            if (m_rightContentView->bottomActive())
+                m_rightContentView->ActivateWidgetType(m_rightContentView->bottomType(), false, true);
+        }
+    }
 };
 
 
