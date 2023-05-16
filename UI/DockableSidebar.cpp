@@ -215,6 +215,7 @@ void DragAcceptingSplitter::dropEvent(QDropEvent *event)
         //contents->setParent(nullptr);
         auto globPos = mapToGlobal(event->position()).toPoint();
         contents->setGeometry(globPos.x(), globPos.y(), 350, m_context->m_context->mainWindow()->height());
+        m_context->WidgetStartedFloating(type, contents);
         contents->show();
     }
 
@@ -683,8 +684,13 @@ void DockableSidebar::UpdateForTypes()
         connect(button, &QPushButton::released, this, [this, button=button, type=type]()
         {
             if (!button->m_beingDragged)
-                m_contentView->ActivateWidgetType(type, (m_sidebarPos == SidebarPos::TopLeft ||
-                                                         m_sidebarPos == SidebarPos::TopRight));
+            {
+                if (m_context->IsWidgetFloating(type))
+                    m_context->ActivateFloatingWidget(type);
+                else
+                    m_contentView->ActivateWidgetType(type, (m_sidebarPos == SidebarPos::TopLeft ||
+                                                             m_sidebarPos == SidebarPos::TopRight));
+            }
         });
         button->setIcon(QIcon(QPixmap::fromImage(type->icon().inactive)));
         button->m_type = type;
@@ -753,7 +759,12 @@ void DockableSidebar::RemovePlaceholder()
 void DockableSidebar::HighlightActiveButton()
 {
     if (!m_contentView)
-        return;
+        for (auto button: m_buttons)
+        {
+            button->setChecked(false);
+            button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).name() + ";}");
+        }
+
     for (auto button: m_buttons)
     {
         if (button->m_type == m_contentView->m_topType)

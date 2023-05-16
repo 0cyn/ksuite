@@ -190,6 +190,7 @@ public:
     DockableSidebarContentView* m_rightContentView;
     OrientablePushButton* m_currentDragTarget;
     std::unordered_map<SidebarPos, DockableSidebar*> m_sidebarForPos;
+    std::map<SidebarWidgetType*, SidebarWidgetAndHeader*> m_floatingWidgets;
     DockableSidebar* SidebarForGlobalPos(QPointF);
     void SetupSidebars();
     void UpdateTypes();
@@ -205,6 +206,26 @@ public:
     {
         m_currentDragTarget = nullptr;
     };
+    void WidgetStartedFloating(SidebarWidgetType* type, SidebarWidgetAndHeader* widget)
+    {
+        m_floatingWidgets[type] = widget;
+        widget->setAttribute(Qt::WA_DeleteOnClose,true);
+        widget->connect(widget, &SidebarWidgetAndHeader::destroyed, [this, type=type](){
+            m_floatingWidgets.erase(type);
+        });
+    }
+    bool IsWidgetFloating(SidebarWidgetType* type)
+    {
+        return m_floatingWidgets.count(type) > 0;
+    }
+    void ActivateFloatingWidget(SidebarWidgetType* type)
+    {
+        if (!IsWidgetFloating(type))
+            return;
+        m_floatingWidgets[type]->setFocus(Qt::OtherFocusReason);
+        m_floatingWidgets[type]->raise();
+    }
+
 };
 
 
