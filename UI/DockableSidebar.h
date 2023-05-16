@@ -72,6 +72,16 @@ enum SidebarPos {
     SidebarPosCount // KEEP AT END!
 };
 
+class DragAcceptingSplitter : public QSplitter
+{
+    ContextSidebarManager* m_context;
+public:
+    DragAcceptingSplitter(ContextSidebarManager* context, QWidget* parent);
+
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+};
+
 class DockableSidebar : public QWidget {
 
     Q_OBJECT
@@ -99,6 +109,12 @@ public:
             m_containedTypes.push_back(type);
         else
             m_containedTypes.insert(m_containedTypes.begin()+idx, type);
+    }
+    void RemoveType(SidebarWidgetType *type)
+    {
+        m_containedTypes.erase(
+                std::remove(m_containedTypes.begin(), m_containedTypes.end(), type),
+                m_containedTypes.end());
     }
     void ClearTypes()
     {
@@ -155,6 +171,7 @@ public:
     void SetBottomWidget(SidebarWidgetAndHeader * widget);
 
     void ActivateWidgetType(SidebarWidgetType* type, bool top, bool reset = false);
+    void DeactivateWidgetType(SidebarWidgetType* type);
     QSize sizeHint() const override;
     void SizeCheck();
 };

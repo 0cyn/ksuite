@@ -47,7 +47,7 @@ DockableSidebar *ContextSidebarManager::SidebarForGlobalPos(QPointF pos)
 
 void ContextSidebarManager::SetupSidebars()
 {
-    auto wholeMainViewSplitter = new QSplitter(nullptr);
+    auto wholeMainViewSplitter = new DragAcceptingSplitter(this, nullptr);
     auto central = m_context->mainWindow()->centralWidget();
 
     auto leftSideFrame = new QFrame(central);
@@ -146,6 +146,78 @@ void ContextSidebarManager::UpdateTypes()
             replacement->HighlightActiveButton();
         }
     }
+}
+
+DragAcceptingSplitter::DragAcceptingSplitter(ContextSidebarManager* context, QWidget* parent)
+    : QSplitter(parent), m_context(context)
+{
+    setAcceptDrops(true);
+}
+
+void DragAcceptingSplitter::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasFormat("text/plain"))
+        event->acceptProposedAction();
+}
+
+void DragAcceptingSplitter::dropEvent(QDropEvent *event)
+{
+    auto type = m_context->m_currentDragTarget->m_type;
+    m_context->m_leftContentView->DeactivateWidgetType(type);
+    m_context->m_rightContentView->DeactivateWidgetType(type);
+    m_context->UpdateTypes();
+
+    SidebarWidgetAndHeader *existingWidget = nullptr;
+    ViewFrame *currentViewFrame = m_context->m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+
+    auto frameIter = m_context->m_widgets.find(type->viewSensitive() ? currentViewFrame : nullptr);
+    if (frameIter != m_context->m_widgets.end())
+    {
+        auto dataIter = frameIter->second.find(type->viewSensitive() ? currentDataType : QString());
+        if (dataIter != frameIter->second.end())
+        {
+            auto widgetIter = dataIter->second.find(type);
+            if (widgetIter != dataIter->second.end())
+                existingWidget = widgetIter->second;
+        }
+    }
+    if (existingWidget)
+    {
+        m_context->m_widgets[m_context->m_context->getCurrentViewFrame()][currentDataType].erase(type);
+    }
+    SidebarWidget *widget;
+    SidebarWidgetAndHeader *contents;
+    if (type->viewSensitive())
+    {
+        if (m_context->m_context->getCurrentViewFrame())
+        {
+            widget = type->createWidget(m_context->m_context->getCurrentViewFrame(), m_context->m_context->getCurrentView()->getData());
+            if (!widget)
+                widget = type->createInvalidContextWidget();
+        } else
+            widget = type->createInvalidContextWidget();
+        contents = new SidebarWidgetAndHeader(widget, m_context->m_context->getCurrentViewFrame());
+
+        // Send notifications for initial state
+        if (m_context->m_context->getCurrentViewFrame())
+            widget->notifyViewChanged(m_context->m_context->getCurrentViewFrame());
+    } else
+    {
+        widget = type->createWidget(nullptr, nullptr);
+        if (!widget)
+            widget = type->createInvalidContextWidget();
+        contents = new SidebarWidgetAndHeader(widget, m_context->m_context->getCurrentViewFrame());
+    }
+
+    if (contents)
+    {
+        //contents->setParent(nullptr);
+        auto globPos = mapToGlobal(event->position()).toPoint();
+        contents->setGeometry(globPos.x(), globPos.y(), 350, m_context->m_context->mainWindow()->height());
+        contents->show();
+    }
+
 }
 
 OrientablePushButton::OrientablePushButton(DockableSidebar *parent)
@@ -307,6 +379,7 @@ void OrientablePushButton::mouseMoveEvent(QMouseEvent *event)
                 setVisible(false);
                 m_trashed = true;
                 drag->exec();
+                return;
             }
         }
         if (!m_trashed)
@@ -353,7 +426,6 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
     {
         if (m_bottomContents->widget()->title().toStdString() == type->name().toStdString())
         {
-            //m_bottomContents->deleteLater();
             m_bottomContents->setParent(nullptr);
             m_bottomContents = nullptr;
             m_bottomType = nullptr;
@@ -366,9 +438,11 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
         m_topType = type;
     else
         m_bottomType = type;
+
     SidebarWidgetAndHeader *existingWidget = nullptr;
     ViewFrame *currentViewFrame = m_sidebarCtx->m_context->getCurrentViewFrame();
     QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+
     auto frameIter = m_sidebarCtx->m_widgets.find(type->viewSensitive() ? currentViewFrame : nullptr);
     if (frameIter != m_sidebarCtx->m_widgets.end())
     {
@@ -391,7 +465,8 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
             SetTopWidget(existingWidget);
         else
             SetBottomWidget(existingWidget);
-    } else
+    }
+    else
     {
         SidebarWidget *widget;
         SidebarWidgetAndHeader *contents;
@@ -428,6 +503,26 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
     }
 
     repaint();
+}
+
+void DockableSidebarContentView::DeactivateWidgetType(SidebarWidgetType* type)
+{
+    if (m_topActive && m_topType == type)
+    {
+        m_topContents->setParent(nullptr);
+        m_topContents = nullptr;
+        m_topType = nullptr;
+        m_topActive = false;
+        SizeCheck();
+    }
+    if (m_botActive && m_bottomType == type)
+    {
+        m_bottomContents->setParent(nullptr);
+        m_bottomContents = nullptr;
+        m_bottomType = nullptr;
+        m_botActive = false;
+        SizeCheck();
+    }
 }
 
 
@@ -526,18 +621,14 @@ void DockableSidebar::dragEnterEvent(QDragEnterEvent *event)
 
 void DockableSidebar::dropEvent(QDropEvent *event)
 {
-    m_context->m_currentDragTarget->m_sidebar->m_containedTypes.erase(
-            std::remove(m_context->m_currentDragTarget->m_sidebar->m_containedTypes.begin(),
-                        m_context->m_currentDragTarget->m_sidebar->m_containedTypes.end(),
-                        m_context->m_currentDragTarget->m_type),
-            m_context->m_currentDragTarget->m_sidebar->m_containedTypes.end());
+    m_context->m_currentDragTarget->m_sidebar->RemoveType(m_context->m_currentDragTarget->m_type);
     size_t targetIdx = IdxForGlobalPos(mapToGlobal(event->position()).toPoint());
     AddType(m_context->m_currentDragTarget->m_type, targetIdx);
+
     if (m_context->m_currentDragTarget->isChecked())
     {
-        // this should remove it.
-        m_context->m_currentDragTarget->m_sidebar->m_contentView->ActivateWidgetType(m_context->m_currentDragTarget->m_type,
-                                                                                     (m_context->m_currentDragTarget->m_sidebar->m_sidebarPos == TopLeft || m_context->m_currentDragTarget->m_sidebar->m_sidebarPos == TopRight));
+        m_context->m_leftContentView->DeactivateWidgetType(m_context->m_currentDragTarget->m_type);
+        m_context->m_rightContentView->DeactivateWidgetType(m_context->m_currentDragTarget->m_type);
         m_contentView->ActivateWidgetType(m_context->m_currentDragTarget->m_type,
                                           (m_sidebarPos == TopLeft || m_sidebarPos == TopRight));
     }
