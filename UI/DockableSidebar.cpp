@@ -285,6 +285,12 @@ void OrientablePushButton::mouseMoveEvent(QMouseEvent *event)
     {
         if (event->buttons() == Qt::LeftButton)
         {
+            if (m_dragTripCount < 6)
+            {
+                m_dragTripCount++;
+                QPushButton::mouseMoveEvent(event);
+                return;
+            }
             if (m_maybeDragStarted)
             {
                 m_beingDragged = true;
@@ -299,8 +305,8 @@ void OrientablePushButton::mouseMoveEvent(QMouseEvent *event)
                 drag->setPixmap(grab());
                 m_sidebar->ButtonMovingOut(this);
                 setVisible(false);
-                drag->exec();
                 m_trashed = true;
+                drag->exec();
             }
         }
         if (!m_trashed)
@@ -311,6 +317,7 @@ void OrientablePushButton::mouseMoveEvent(QMouseEvent *event)
 void OrientablePushButton::mouseReleaseEvent(QMouseEvent *event)
 {
     // m_context->UpdateTypes();
+    m_dragTripCount = 0;
     QPushButton::mouseReleaseEvent(event);
 }
 
@@ -338,6 +345,7 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
             m_topContents = nullptr;
             m_topType = nullptr;
             m_topActive = false;
+            SizeCheck();
             return;
         }
     }
@@ -350,6 +358,7 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
             m_bottomContents = nullptr;
             m_bottomType = nullptr;
             m_botActive = false;
+            SizeCheck();
             return;
         }
     }
@@ -524,6 +533,14 @@ void DockableSidebar::dropEvent(QDropEvent *event)
             m_context->m_currentDragTarget->m_sidebar->m_containedTypes.end());
     size_t targetIdx = IdxForGlobalPos(mapToGlobal(event->position()).toPoint());
     AddType(m_context->m_currentDragTarget->m_type, targetIdx);
+    if (m_context->m_currentDragTarget->isChecked())
+    {
+        // this should remove it.
+        m_context->m_currentDragTarget->m_sidebar->m_contentView->ActivateWidgetType(m_context->m_currentDragTarget->m_type,
+                                                                                     (m_context->m_currentDragTarget->m_sidebar->m_sidebarPos == TopLeft || m_context->m_currentDragTarget->m_sidebar->m_sidebarPos == TopRight));
+        m_contentView->ActivateWidgetType(m_context->m_currentDragTarget->m_type,
+                                          (m_sidebarPos == TopLeft || m_sidebarPos == TopRight));
+    }
     m_context->m_currentDragTarget->m_trashed = true;
     m_context->m_currentDragTarget->deleteLater();
     m_context->UpdateTypes();
@@ -533,6 +550,11 @@ void DockableSidebar::dragMoveEvent(QDragMoveEvent *event)
 {
     size_t targetIdx = IdxForGlobalPos(mapToGlobal(event->position()).toPoint());
     DisplayDropPlaceholderForHeldButton(m_context->m_currentDragTarget, targetIdx);
+}
+
+void DockableSidebar::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    RemovePlaceholder();
 }
 
 void DockableSidebar::AddButton(OrientablePushButton *button)
@@ -567,10 +589,11 @@ void DockableSidebar::UpdateForTypes()
     for (auto type: m_containedTypes)
     {
         auto button = new OrientablePushButton(type->name(), this);
-        connect(button, &QPushButton::pressed, this, [this, type = type]()
+        connect(button, &QPushButton::released, this, [this, button=button, type=type]()
         {
-            m_contentView->ActivateWidgetType(type, (m_sidebarPos == SidebarPos::TopLeft ||
-                                                     m_sidebarPos == SidebarPos::TopRight));
+            if (!button->m_beingDragged)
+                m_contentView->ActivateWidgetType(type, (m_sidebarPos == SidebarPos::TopLeft ||
+                                                         m_sidebarPos == SidebarPos::TopRight));
         });
         button->setIcon(QIcon(QPixmap::fromImage(type->icon().inactive)));
         button->m_type = type;
@@ -630,7 +653,10 @@ void DockableSidebar::DisplayDropPlaceholderForHeldButton(OrientablePushButton *
 void DockableSidebar::RemovePlaceholder()
 {
     if (m_placeholderButton)
+    {
+        m_placeholderButton->setVisible(false);
         m_layout->removeWidget(m_placeholderButton);
+    }
 }
 
 void DockableSidebar::HighlightActiveButton()

@@ -38,6 +38,7 @@ public:
 
     bool m_maybeDragStarted = false;
     bool m_beingDragged = false;
+    size_t m_dragTripCount = 0;
     QPointF m_mousePressPos;
     QPointF m_mouseMovePos;
     OrientablePushButton* m_dragButton;
@@ -110,6 +111,7 @@ public:
     void dropEvent(QDropEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
     void ButtonMovingOut(OrientablePushButton* button);
     size_t IdxForGlobalPos(QPoint);
     void DisplayDropPlaceholderForHeldButton(OrientablePushButton* button, size_t idx);
