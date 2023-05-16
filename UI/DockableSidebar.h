@@ -89,7 +89,8 @@ class DockableSidebar : public QWidget {
     std::vector<OrientablePushButton*> m_buttons;
 public:
 
-    DockableSidebar(ContextSidebarManager* context, SidebarPos pos, QWidget* parent);
+    DockableSidebar(ContextSidebarManager* context, SidebarPos pos,
+                    DockableSidebarContentView* contentView, QWidget* parent);
     void AddButton(OrientablePushButton* button);
     void AddType(SidebarWidgetType* type, uint8_t idx = UINT8_MAX)
     {
@@ -147,7 +148,7 @@ public:
     // DockableSidebar* m_linkedSidebar;
     UIContext* m_context;
     ContextSidebarManager* m_sidebarCtx;
-    DockableSidebarContentView(QSplitter* parentSplitter, QWidget* parent = nullptr);
+    DockableSidebarContentView(ContextSidebarManager* sidebarContext, UIContext* context, QSplitter* parentSplitter, bool left, QWidget* parent = nullptr);
     void SetTopWidget(SidebarWidgetAndHeader * widget);
     void SetBottomWidget(SidebarWidgetAndHeader * widget);
 

@@ -1,14 +1,13 @@
-This is a collection of unofficial, unvetted, unverified tooling I've written for binja.
+This is a modpack for BinaryNinja that implements some UI modifications and also adds support for a few file formats.
 
-It is not associated or affiliated with Vector35 in any capacity.
+It is not officially associated or affiliated with Vector35 in any capacity.
 
 ## UI Tooling
 
-### RightSideBar
+### Dockable Sidebars
 
-Thin sidebar pinned to the right side of the window.
-
-Where new UI tooling added by this plugin goes.
+Sidebars support all 4 positions (at the 4 corners of the screen,) and widgets
+can be moved around.
 
 #### ARM Manual
 
