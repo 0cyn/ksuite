@@ -251,6 +251,56 @@ SidebarWidgetAndHeader* ContextSidebarManager::getWidgetForType(SidebarWidgetTyp
     return contents;
 }
 
+void ContextSidebarManager::ResetAllWidgets()
+{
+    m_oldContainer->setVisible(false);
+    for (const auto& [k, v] : m_floatingWidgetContainers)
+    {
+        for (size_t i = 0; i < v->layout()->count(); i++)
+        {
+            auto item = v->layout()->itemAt(i);
+            if (auto wid = item->widget())
+            {
+                wid->setVisible(false);
+                wid->setParent(nullptr);
+            }
+        }
+        auto widget = getExistingFloatingWidget(k);
+        if (!widget)
+            widget = getWidgetForType(k);
+        setExistingFloatingWidget(k, widget);
+        v->layout()->addWidget(widget);
+    }
+    if (m_leftContentView)
+    {
+        if (m_leftContentView->topActive())
+            m_leftContentView->ActivateWidgetType(m_leftContentView->topType(), true, true);
+        if (m_leftContentView->bottomActive())
+            m_leftContentView->ActivateWidgetType(m_leftContentView->bottomType(), false, true);
+    }
+    if (m_rightContentView)
+    {
+        if (m_rightContentView->topActive())
+            m_rightContentView->ActivateWidgetType(m_rightContentView->topType(), true, true);
+        if (m_rightContentView->bottomActive())
+            m_rightContentView->ActivateWidgetType(m_rightContentView->bottomType(), false, true);
+    }
+}
+
+void ContextSidebarManager::WidgetStartedFloating(SidebarWidgetType* type, SidebarWidgetAndHeader* widget, QPoint pos)
+{
+    auto container = new QFrame();
+    container->setLayout(new QVBoxLayout());
+    container->setGeometry(pos.x(), pos.y(), 350, uiContext()->mainWindow()->height());
+    container->layout()->addWidget(widget);
+    m_floatingWidgetContainers[type] = container;
+    container->setAttribute(Qt::WA_DeleteOnClose,true);
+    container->connect(widget, &SidebarWidgetAndHeader::destroyed, [this, type=type](){
+        m_floatingWidgetContainers.erase(type);
+    });
+    container->show();
+}
+
 DragAcceptingSplitter::DragAcceptingSplitter(ContextSidebarManager* context, QWidget* parent)
     : QSplitter(parent), m_context(context)
 {
