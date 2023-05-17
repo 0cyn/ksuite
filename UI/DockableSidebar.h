@@ -191,11 +191,12 @@ class ContextSidebarManager {
     SidebarWidgetContainer* m_oldContainer;
     QLayout* m_targetLayout;
     std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_widgets;
+    std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_floatingWidgets;
     DockableSidebarContentView* m_leftContentView;
     DockableSidebarContentView* m_rightContentView;
     OrientablePushButton* m_currentDragTarget;
     std::unordered_map<SidebarPos, DockableSidebar*> m_sidebarForPos;
-    std::map<SidebarWidgetType*, SidebarWidgetAndHeader*> m_floatingWidgets;
+    std::map<SidebarWidgetType*, QWidget*> m_floatingWidgetContainers;
 public:
     ContextSidebarManager(SidebarWidgetContainer* oldContainer, QWidget* oldSidebar, QLayout* oldLayout, UIContext* context)
         : m_oldContainer(oldContainer), m_oldSidebar(oldSidebar), m_targetLayout(oldLayout), m_context(context)
@@ -205,9 +206,13 @@ public:
     void SetupSidebars();
     void UpdateTypes();
 
+    SidebarWidgetAndHeader* getWidgetForType(SidebarWidgetType* type);
     SidebarWidgetAndHeader* getExistingWidget(SidebarWidgetType* type);
+    SidebarWidgetAndHeader* getExistingFloatingWidget(SidebarWidgetType* type);
     void deleteExistingWidget(SidebarWidgetType* type);
+    void deleteExistingFloatingWidget(SidebarWidgetType* type);
     void setExistingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents);
+    void setExistingFloatingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents);
 
     UIContext* uiContext() { return m_context; }
     void RegisterSidebar(DockableSidebar* sidebar)
@@ -223,28 +228,50 @@ public:
     {
         m_currentDragTarget = nullptr;
     };
-    void WidgetStartedFloating(SidebarWidgetType* type, SidebarWidgetAndHeader* widget)
+    void WidgetStartedFloating(SidebarWidgetType* type, SidebarWidgetAndHeader* widget, QPoint pos)
     {
-        m_floatingWidgets[type] = widget;
-        widget->setAttribute(Qt::WA_DeleteOnClose,true);
-        widget->connect(widget, &SidebarWidgetAndHeader::destroyed, [this, type=type](){
-            m_floatingWidgets.erase(type);
+        auto container = new QFrame();
+        container->setLayout(new QVBoxLayout());
+        container->setGeometry(pos.x(), pos.y(), 350, uiContext()->mainWindow()->height());
+        container->layout()->addWidget(widget);
+        m_floatingWidgetContainers[type] = container;
+        container->setAttribute(Qt::WA_DeleteOnClose,true);
+        container->connect(widget, &SidebarWidgetAndHeader::destroyed, [this, type=type](){
+            m_floatingWidgetContainers.erase(type);
         });
+        container->show();
     }
     bool IsWidgetFloating(SidebarWidgetType* type)
     {
-        return m_floatingWidgets.count(type) > 0;
+        return m_floatingWidgetContainers.count(type) > 0;
     }
     void ActivateFloatingWidget(SidebarWidgetType* type)
     {
         if (!IsWidgetFloating(type))
             return;
-        m_floatingWidgets[type]->setFocus(Qt::OtherFocusReason);
-        m_floatingWidgets[type]->raise();
+        m_floatingWidgetContainers[type]->setFocus(Qt::OtherFocusReason);
+        m_floatingWidgetContainers[type]->raise();
     }
     void ResetAllWidgets()
     {
         m_oldContainer->setVisible(false);
+        for (const auto& [k, v] : m_floatingWidgetContainers)
+        {
+            for (size_t i = 0; i < v->layout()->count(); i++)
+            {
+                auto item = v->layout()->itemAt(i);
+                if (auto wid = item->widget())
+                {
+                    wid->setVisible(false);
+                    wid->setParent(nullptr);
+                }
+            }
+            auto widget = getExistingFloatingWidget(k);
+            if (!widget)
+                widget = getWidgetForType(k);
+            setExistingFloatingWidget(k, widget);
+            v->layout()->addWidget(widget);
+        }
         if (m_leftContentView)
         {
             if (m_leftContentView->topActive())
@@ -260,6 +287,8 @@ public:
                 m_rightContentView->ActivateWidgetType(m_rightContentView->bottomType(), false, true);
         }
     }
+
+
 };
 
 

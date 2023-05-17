@@ -174,6 +174,26 @@ SidebarWidgetAndHeader* ContextSidebarManager::getExistingWidget(SidebarWidgetTy
     return existingWidget;
 }
 
+SidebarWidgetAndHeader* ContextSidebarManager::getExistingFloatingWidget(SidebarWidgetType* type)
+{
+    SidebarWidgetAndHeader *existingWidget = nullptr;
+    ViewFrame *currentViewFrame = m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+
+    auto frameIter = m_floatingWidgets.find(type->viewSensitive() ? currentViewFrame : nullptr);
+    if (frameIter != m_floatingWidgets.end())
+    {
+        auto dataIter = frameIter->second.find(type->viewSensitive() ? currentDataType : QString());
+        if (dataIter != frameIter->second.end())
+        {
+            auto widgetIter = dataIter->second.find(type);
+            if (widgetIter != dataIter->second.end())
+                existingWidget = widgetIter->second;
+        }
+    }
+    return existingWidget;
+}
+
 
 void ContextSidebarManager::setExistingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents)
 {
@@ -182,11 +202,53 @@ void ContextSidebarManager::setExistingWidget(SidebarWidgetType* type, SidebarWi
     m_widgets[currentViewFrame][currentDataType][type] = contents;
 }
 
+void ContextSidebarManager::setExistingFloatingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents)
+{
+    ViewFrame *currentViewFrame = m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+    m_floatingWidgets[currentViewFrame][currentDataType][type] = contents;
+}
+
 void ContextSidebarManager::deleteExistingWidget(SidebarWidgetType* type)
 {
     ViewFrame *currentViewFrame = m_context->getCurrentViewFrame();
     QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
     m_widgets[m_context->getCurrentViewFrame()][currentDataType].erase(type);
+}
+
+void ContextSidebarManager::deleteExistingFloatingWidget(SidebarWidgetType* type)
+{
+    ViewFrame *currentViewFrame = m_context->getCurrentViewFrame();
+    QString currentDataType = currentViewFrame ? currentViewFrame->getCurrentDataType() : QString();
+    m_floatingWidgets[m_context->getCurrentViewFrame()][currentDataType].erase(type);
+}
+
+SidebarWidgetAndHeader* ContextSidebarManager::getWidgetForType(SidebarWidgetType* type)
+{
+    SidebarWidget *widget;
+    SidebarWidgetAndHeader *contents;
+    if (type->viewSensitive())
+    {
+        if (m_context->getCurrentViewFrame())
+        {
+            widget = type->createWidget(m_context->getCurrentViewFrame(), m_context->getCurrentView()->getData());
+            if (!widget)
+                widget = type->createInvalidContextWidget();
+        } else
+            widget = type->createInvalidContextWidget();
+        contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
+
+        // Send notifications for initial state
+        if (m_context->getCurrentViewFrame())
+            widget->notifyViewChanged(m_context->getCurrentViewFrame());
+    } else
+    {
+        widget = type->createWidget(nullptr, nullptr);
+        if (!widget)
+            widget = type->createInvalidContextWidget();
+        contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
+    }
+    return contents;
 }
 
 DragAcceptingSplitter::DragAcceptingSplitter(ContextSidebarManager* context, QWidget* parent)
@@ -203,6 +265,7 @@ void DragAcceptingSplitter::dragEnterEvent(QDragEnterEvent *event)
 
 void DragAcceptingSplitter::dropEvent(QDropEvent *event)
 {
+    SidebarWidgetAndHeader *contents;
     auto type = m_context->dragTarget()->getType();
     m_context->DeactivateType(type);
     m_context->UpdateTypes();
@@ -211,38 +274,18 @@ void DragAcceptingSplitter::dropEvent(QDropEvent *event)
     if (existingWidget)
         m_context->deleteExistingWidget(type);
 
-    SidebarWidget *widget;
-    SidebarWidgetAndHeader *contents;
-    if (type->viewSensitive())
+    contents = m_context->getExistingFloatingWidget(type);
+    if (!contents)
     {
-        if (m_context->uiContext()->getCurrentViewFrame())
-        {
-            widget = type->createWidget(m_context->uiContext()->getCurrentViewFrame(), m_context->uiContext()->getCurrentView()->getData());
-            if (!widget)
-                widget = type->createInvalidContextWidget();
-        } else
-            widget = type->createInvalidContextWidget();
-        contents = new SidebarWidgetAndHeader(widget, m_context->uiContext()->getCurrentViewFrame());
-
-        // Send notifications for initial state
-        if (m_context->uiContext()->getCurrentViewFrame())
-            widget->notifyViewChanged(m_context->uiContext()->getCurrentViewFrame());
-    }
-    else
-    {
-        widget = type->createWidget(nullptr, nullptr);
-        if (!widget)
-            widget = type->createInvalidContextWidget();
-        contents = new SidebarWidgetAndHeader(widget, m_context->uiContext()->getCurrentViewFrame());
+        contents = m_context->getWidgetForType(type);
+        m_context->setExistingFloatingWidget(type, contents);
     }
 
     if (contents)
     {
         //contents->setParent(nullptr);
         auto globPos = mapToGlobal(event->position()).toPoint();
-        contents->setGeometry(globPos.x(), globPos.y(), 350, m_context->uiContext()->mainWindow()->height());
-        m_context->WidgetStartedFloating(type, contents);
-        contents->show();
+        m_context->WidgetStartedFloating(type, contents, globPos);
     }
 
 }
@@ -343,7 +386,6 @@ void OrientablePushButton::mousePressEvent(QMouseEvent *event)
     }
 
     QPushButton::mousePressEvent(event);
-    m_sidebar->HighlightActiveButton();
 }
 
 void OrientablePushButton::mouseMoveEvent(QMouseEvent *event)
@@ -387,6 +429,7 @@ void OrientablePushButton::mouseReleaseEvent(QMouseEvent *event)
     // m_context->UpdateTypes();
     m_dragTripCount = 0;
     QPushButton::mouseReleaseEvent(event);
+    m_sidebar->HighlightActiveButton();
 }
 
 DockableSidebarContentView::DockableSidebarContentView(ContextSidebarManager *sidebarContext, UIContext *context,
@@ -449,30 +492,8 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
     }
     else
     {
-        SidebarWidget *widget;
-        SidebarWidgetAndHeader *contents;
-        if (type->viewSensitive())
-        {
-            if (m_context->getCurrentViewFrame())
-            {
-                widget = type->createWidget(m_context->getCurrentViewFrame(), m_context->getCurrentView()->getData());
-                if (!widget)
-                    widget = type->createInvalidContextWidget();
-            } else
-                widget = type->createInvalidContextWidget();
-            contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
-            m_sidebarCtx->setExistingWidget(type, contents);
-
-            // Send notifications for initial state
-            if (m_context->getCurrentViewFrame())
-                widget->notifyViewChanged(m_context->getCurrentViewFrame());
-        } else
-        {
-            widget = type->createWidget(nullptr, nullptr);
-            if (!widget)
-                widget = type->createInvalidContextWidget();
-            contents = new SidebarWidgetAndHeader(widget, m_context->getCurrentViewFrame());
-        }
+        SidebarWidgetAndHeader *contents = m_sidebarCtx->getWidgetForType(type);
+        m_sidebarCtx->setExistingWidget(type, contents);
 
         if (contents)
         {
@@ -746,13 +767,9 @@ void DockableSidebar::HighlightActiveButton()
 
     for (auto button: m_buttons)
     {
-        if (button->m_type == m_contentView->topType())
-        {
-            button->setChecked(true);
-            button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).darker(140).name() + ";}");
-            continue;
-        }
-        if (button->m_type == m_contentView->bottomType())
+        if (button->m_type == m_contentView->topType()
+        || button->m_type == m_contentView->bottomType()
+        || m_context->IsWidgetFloating(button->m_type))
         {
             button->setChecked(true);
             button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).darker(140).name() + ";}");
