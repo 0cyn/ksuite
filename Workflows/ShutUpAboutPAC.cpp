@@ -12,16 +12,13 @@ typedef unsigned __int128 uint128_t;
 
 union vreg {
     uint128_t raw;
-
     uint64_t smaller[2];
-
     uint8_t fields[16];
 };
 
 
 void ShutUpAboutPAC::FixBrokenSIMD(Ref<AnalysisContext> ctx)
 {
-
     const auto func = ctx->GetFunction();
     const auto arch = func->GetArchitecture();
     const auto bv = func->GetView();
