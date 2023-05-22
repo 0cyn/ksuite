@@ -378,6 +378,50 @@ public:
     BinaryNinja::Ref<BinaryNinja::Settings> GetLoadSettingsForData(BinaryNinja::BinaryView *data) override { return nullptr; }
 };
 
+struct LoadedImage {
+    std::string name;
+    uint64_t headerBase;
+    std::vector<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> loadedSegments;
+    std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> loadedSections;
+
+    rapidjson::Document serialize(rapidjson::Document::AllocatorType& allocator)
+    {
+
+        rapidjson::Document d;
+        d.SetObject();
+
+        rapidjson::Value loadedSegs(rapidjson::kArrayType);
+        for (auto seg : loadedSegments)
+        {
+            rapidjson::Value segV(rapidjson::kArrayType);
+            segV.PushBack(seg.first, allocator);
+            segV.PushBack(seg.second.first, allocator);
+            segV.PushBack(seg.second.second, allocator);
+            loadedSegs.PushBack(segV, allocator);
+        }
+
+        d.AddMember("name",  name, allocator);
+        d.AddMember("headerBase",   headerBase, allocator);
+        d.AddMember("loadedSegments",    loadedSegs, allocator);
+
+        return d;
+    }
+    static LoadedImage deserialize(rapidjson::Value doc)
+    {
+        LoadedImage img;
+        img.name = doc["name"].GetString();
+        img.headerBase = doc["headerBase"].GetUint64();
+        for (auto& seg : doc["loadedSegments"].GetArray())
+        {
+            std::pair<uint64_t, std::pair<uint64_t, uint64_t>> lSeg;
+            lSeg.first = seg.GetArray()[0].GetUint64();
+            lSeg.second.first = seg.GetArray()[1].GetUint64();
+            lSeg.second.second = seg.GetArray()[2].GetUint64();
+            img.loadedSegments.push_back(lSeg);
+        }
+        return img;
+    }
+};
 
 const std::string SharedCacheMetadataTag = "KSUITE-SharedCacheData";
 class ScopedVMMapSession;
@@ -395,56 +439,13 @@ class SharedCache
         LoadedWithImages,
     } m_viewState;
 
-    struct LoadedImage {
-        std::string name;
-        uint64_t headerBase;
-        std::vector<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> loadedSegments;
-        std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> loadedSections;
 
-        rapidjson::Document serialize(rapidjson::Document::AllocatorType& allocator)
-        {
-
-            rapidjson::Document d;
-            d.SetObject();
-
-            rapidjson::Value loadedSegs(rapidjson::kArrayType);
-            for (auto seg : loadedSegments)
-            {
-                rapidjson::Value segV(rapidjson::kArrayType);
-                segV.PushBack(seg.first, allocator);
-                segV.PushBack(seg.second.first, allocator);
-                segV.PushBack(seg.second.second, allocator);
-                loadedSegs.PushBack(segV, allocator);
-            }
-
-            d.AddMember("name",  name, allocator);
-            d.AddMember("headerBase",   headerBase, allocator);
-            d.AddMember("loadedSegments",    loadedSegs, allocator);
-
-            return d;
-        }
-        static LoadedImage deserialize(rapidjson::Value doc)
-        {
-            LoadedImage img;
-            img.name = doc["name"].GetString();
-            img.headerBase = doc["headerBase"].GetUint64();
-            for (auto& seg : doc["loadedSegments"].GetArray())
-            {
-                std::pair<uint64_t, std::pair<uint64_t, uint64_t>> lSeg;
-                lSeg.first = seg.GetArray()[0].GetUint64();
-                lSeg.second.first = seg.GetArray()[1].GetUint64();
-                lSeg.second.second = seg.GetArray()[2].GetUint64();
-                img.loadedSegments.push_back(lSeg);
-            }
-            return img;
-        }
-    };
     std::map<std::string, LoadedImage> m_loadedImages;
 
     /* VIEWSTATE END */
 
     /* API VIEW START */
-    BinaryNinja::Ref<BinaryNinja::BinaryView> m_rawView;
+    BinaryNinja::Ref<BinaryNinja::BinaryView> m_dscView;
     /* API VIEW END */
 
     /* VM READER START */
@@ -470,18 +471,15 @@ class SharedCache
     void DeserializeFromRawView();
 
 public:
-    static SharedCache* GetFromRawView(BinaryNinja::Ref<BinaryNinja::BinaryView> rawView);
-    static SharedCache* GetFromDSCView(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView)
+    static SharedCache* GetFromDSCView(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView);
+    bool SaveToDSCView()
     {
-        return GetFromRawView(dscView->GetParentView());
-    }
-    bool SaveToRawView()
-    {
-        if (m_rawView)
+        if (m_dscView)
         {
             BinaryNinja::Ref<BinaryNinja::Metadata> data = new BinaryNinja::Metadata(Serialize());
-            m_rawView->StoreMetadata(SharedCacheMetadataTag, data);
-            BNLogInfo("meta: %s", m_rawView->GetStringMetadata(SharedCacheMetadataTag).c_str());
+            m_dscView->StoreMetadata(SharedCacheMetadataTag, data);
+            m_dscView->GetParentView()->GetParentView()->StoreMetadata(SharedCacheMetadataTag, data);
+            // BNLogInfo("meta: %s", m_dscView->GetStringMetadata(SharedCacheMetadataTag).c_str());
             return true;
         }
         return false;

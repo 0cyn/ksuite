@@ -481,10 +481,10 @@ int64_t VMReader::ReadLong() {
 
 DSCRawView::DSCRawView(const std::string &typeName, BinaryView *data, bool parseOnly)
     : BinaryView(typeName,
-                 new FileMetadata(),
+                 data->GetFile(),
             data)
 {
-    GetFile()->SetFilename(data->GetFile()->GetFilename());
+    GetFile()->SetFilename(data->GetFile()->GetOriginalFilename());
     auto reader = new BinaryReader(GetParentView());
     reader->Seek(16);
     auto size = reader->Read32();
@@ -541,11 +541,57 @@ DSCView::DSCView(const std::string &typeName, BinaryView *data, bool parseOnly)
 
 bool DSCView::Init()
 {
-    auto reader = new BinaryReader(GetParentView());
-    reader->Seek(16);
-    auto size = reader->Read32();
-    //WriteBuffer(0, GetParentView()->ReadBuffer(0, size));
-    AddAutoSegment(0, size, 0, size, SegmentReadable);
+    SetDefaultArchitecture(Architecture::GetByName("aarch64"));
+    SetDefaultPlatform(Platform::GetByName("mac-aarch64"));
+
+    std::vector<LoadedImage> images;
+    if (auto meta = GetParentView()->GetParentView()->QueryMetadata(SharedCacheMetadataTag))
+    {
+        std::string data = GetParentView()->GetParentView()->GetStringMetadata(SharedCacheMetadataTag);
+        BNLogError("%s", data.c_str());
+        std::stringstream ss;
+        ss.str(data);
+        rapidjson::Document result(rapidjson::kObjectType);
+
+        result.Parse(data.c_str());
+        for (auto &imgV: result["loadedImages"].GetArray())
+        {
+            if (imgV.HasMember("name"))
+            {
+                auto name = imgV.FindMember("name");
+                if (name != imgV.MemberEnd())
+                    images.push_back(LoadedImage::deserialize(imgV.GetObject()));
+            }
+        }
+    }
+    else
+    {
+        auto reader = new BinaryReader(GetParentView());
+        reader->Seek(16);
+        auto size = reader->Read32();
+        //WriteBuffer(0, GetParentView()->ReadBuffer(0, size));
+        AddAutoSegment(0, size, 0, size, SegmentReadable);
+        return true;
+    }
+
+    for (auto segment : GetSegments())
+    {
+        if (!segment->IsAutoDefined())
+            RemoveUserSegment(segment->GetStart(), segment->GetLength());
+    }
+    for (auto image : images)
+    {
+        for (auto seg : image.loadedSegments)
+        {
+            // yeah ok this sucks ass
+            // but is literally the only way
+            // we're in deser, we have to rebuild our parent view as well here
+            GetParentView()->AddUserSegment(seg.first, seg.second.second, seg.first, seg.second.second, SegmentReadable);
+            GetParentView()->WriteBuffer(seg.first, GetParentView()->GetParentView()->ReadBuffer(seg.first, seg.second.second));
+            AddAutoSegment(seg.second.first, seg.second.second, seg.first, seg.second.second, SegmentReadable | SegmentExecutable);
+
+        }
+    }
 
     return true;
 }
@@ -584,7 +630,7 @@ bool DSCViewType::IsTypeValidForData(BinaryNinja::BinaryView *data)
 
 bool SharedCache::SetupVMMap(bool mapPages)
 {
-    auto path = m_rawView->GetFile()->GetFilename();
+    auto path = m_dscView->GetFile()->GetOriginalFilename();
     try {
         m_baseFile = std::shared_ptr<MMappedFileAccessor>(new MMappedFileAccessor(path));
     }
@@ -592,9 +638,20 @@ bool SharedCache::SetupVMMap(bool mapPages)
     {
         return false;
     }
+
+    DataBuffer sig = *m_baseFile->ReadBuffer(0, 4);
+    if (sig.GetLength() != 4)
+        return false;
+    const char *magic = (char *) sig.GetData();
+    if (strncmp(magic, "dyld", 4) == 0)
+    {
+    }
+    else
+        return false;
     if (mapPages)
     {
         auto format = GetCacheFormat();
+
 
         dyld_cache_header header{};
         size_t header_size = m_baseFile->ReadUInt32(16);
@@ -846,9 +903,9 @@ std::string SharedCache::Serialize()
 
 void SharedCache::DeserializeFromRawView()
 {
-    if (m_rawView->QueryMetadata(SharedCacheMetadataTag))
+    if (m_dscView->QueryMetadata(SharedCacheMetadataTag))
     {
-        std::string data = m_rawView->GetStringMetadata(SharedCacheMetadataTag);
+        std::string data = m_dscView->GetStringMetadata(SharedCacheMetadataTag);
         std::stringstream ss;
         ss.str(data);
         rapidjson::Document result(rapidjson::kObjectType);
@@ -871,24 +928,26 @@ void SharedCache::DeserializeFromRawView()
     {
         m_viewState = Loaded;
         m_loadedImages.clear();
-        m_rawViewCursor = m_rawView->GetEnd();
+        m_rawViewCursor = m_dscView->GetParentView()->GetEnd();
     }
 }
 
-SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> rawView)
-    : m_rawView(rawView)
+SharedCache::SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView)
+    : m_dscView(dscView)
 {
     DeserializeFromRawView();
 }
 
-SharedCache* SharedCache::GetFromRawView(BinaryNinja::Ref<BinaryNinja::BinaryView> rawView)
+SharedCache* SharedCache::GetFromDSCView(BinaryNinja::Ref<BinaryNinja::BinaryView> dscView)
 {
-    return new SharedCache(std::move(rawView));
+    return new SharedCache(std::move(dscView));
 }
 
 bool SharedCache::LoadImageWithInstallName(std::string installName)
 {
     auto mapLock = ScopedVMMapSession(this);
+    if (!m_baseFile)
+        return false;
     auto format = GetCacheFormat();
     LoadedImage image;
     image.headerBase = 0;
@@ -937,7 +996,7 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
         return false;
 
     m_viewState = LoadedWithImages;
-    m_rawViewCursor = m_rawView->GetEnd();
+    m_rawViewCursor = m_dscView->GetParentView()->GetEnd();
     auto reader = VMReader(m_vm);
     reader.Seek(image.headerBase);
     size_t headerStart = reader.Offset();
@@ -954,13 +1013,15 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
             if (lc == LC_SEGMENT_64) {
                 segment_command_64 cmd{};
                 reader.Read(&cmd, off, sizeof(segment_command_64));
-                if (cmd.vmsize >= 0x1000000)
+                if (cmd.vmsize >= 0x8000000)
                     continue;
                 auto buff = reader.ReadBuffer(cmd.vmaddr, cmd.vmsize);
-                m_rawView->GetParentView()->WriteBuffer(m_rawViewCursor, *buff);
+                m_dscView->GetParentView()->WriteBuffer(m_rawViewCursor, *buff);
                 image.loadedSegments.push_back({m_rawViewCursor, {cmd.vmaddr, cmd.vmaddr + cmd.vmsize}});
-                m_rawView->AddUserSegment(m_rawViewCursor, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable);
-                m_rawViewCursor = m_rawView->GetEnd();
+                m_dscView->GetParentView()->AddUserSegment(m_rawViewCursor, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable);
+                m_dscView->AddUserSegment(cmd.vmaddr, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable | SegmentExecutable);
+                m_dscView->WriteBuffer(cmd.vmaddr, *buff);
+                m_rawViewCursor = m_dscView->GetParentView()->GetEnd();
             }
             off += bump;
         }
@@ -974,20 +1035,22 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
             if (lc == LC_SEGMENT) {
                 segment_command cmd{};
                 reader.Read(&cmd, off, sizeof(segment_command));
-                if (cmd.vmsize >= 0x1000000)
+                if (cmd.vmsize >= 0x8000000)
                     continue;
                 auto buff = reader.ReadBuffer(cmd.vmaddr, cmd.vmsize);
-                m_rawView->GetParentView()->WriteBuffer(m_rawViewCursor, *buff);
+                m_dscView->GetParentView()->WriteBuffer(m_rawViewCursor, *buff);
                 image.loadedSegments.push_back({m_rawViewCursor, {cmd.vmaddr, cmd.vmaddr + cmd.vmsize}});
-                m_rawView->AddUserSegment(m_rawViewCursor, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable);
-                m_rawViewCursor = m_rawView->GetEnd();
+                m_dscView->GetParentView()->AddUserSegment(m_rawViewCursor, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable);
+                m_dscView->AddUserSegment(cmd.vmaddr, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable | SegmentExecutable);
+                m_dscView->WriteBuffer(cmd.vmaddr, *buff);
+                m_rawViewCursor = m_dscView->GetParentView()->GetEnd();
             }
             off += bump;
         }
     }
 
     m_loadedImages[image.name] = image;
-    SaveToRawView();
+    SaveToDSCView();
 
     return true;
 }
@@ -995,9 +1058,12 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 std::vector<std::string> SharedCache::GetAvailableImages()
 {
     std::vector<std::string> installNames;
+
     auto mapLock = ScopedVMMapSession(this);
     auto format = GetCacheFormat();
 
+    if (!m_baseFile)
+        return {};
     dyld_cache_header header{};
     size_t header_size = m_baseFile->ReadUInt32(16);
     m_baseFile->Read(&header, 0, std::min(header_size, sizeof(dyld_cache_header)));
@@ -1042,7 +1108,7 @@ bool BNDSCViewLoadImageWithInstallName(BNBinaryView* view, char* name)
     BNFreeString(name);
     auto rawView = new BinaryView(view);
 
-    if (auto cache = SharedCache::GetFromRawView(rawView))
+    if (auto cache = SharedCache::GetFromDSCView(rawView))
     {
         return cache->LoadImageWithInstallName(imageName);
     }
@@ -1054,7 +1120,7 @@ char **BNDSCViewGetInstallNames(BNBinaryView *view, size_t *count)
 {
     auto rawView = new BinaryView(view);
 
-    if (auto cache = SharedCache::GetFromRawView(rawView))
+    if (auto cache = SharedCache::GetFromDSCView(rawView))
     {
         auto value = cache->GetAvailableImages();
         *count = value.size();

@@ -6,6 +6,8 @@
 
 #include "typeview.h"
 #include "viewframe.h"
+#include "progresstask.h"
+#include "../priv.h"
 
 #include <QtCore/QMimeData>
 #include <QtWidgets/QHeaderView>

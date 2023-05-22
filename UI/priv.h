@@ -2,6 +2,8 @@
 // Created by kat on 5/9/23.
 //
 
+// PLEASE MAKE THESE PUBLIC AT SOME POINT THERES SO MUCH REALLY ANNOYING STUFF I DONT WANT TO REWRITE
+
 #ifndef KSUITE_PRIV_H
 #define KSUITE_PRIV_H
 #pragma once
@@ -15,6 +17,12 @@
 #include "filter.h"
 #include "sidebar.h"
 #include "uitypes.h"
+#include "tabwidget.h"
+#include "datatypelist.h"
+#include "viewlist.h"
+#include "addressindicator.h"
+#include "logview.h"
+#include "scriptingconsole.h"
 
 #include <mutex>
 
