@@ -10,14 +10,16 @@
 #include "UI/theme/ThemeInjector.h"
 #include "UI/theme/Flattery.h"
 
+void InitDSCViewType();
+
 extern "C" {
 
 BN_DECLARE_CORE_ABI_VERSION
 BN_DECLARE_UI_ABI_VERSION
-
 BINARYNINJAPLUGIN bool CorePluginInit() {
 
     ShutUpAboutPAC::Register();
+    InitDSCViewType();
 
     return true;
 }

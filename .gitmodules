@@ -4,3 +4,6 @@
 [submodule "Views/MachO"]
 	path = Views/MachO
 	url = git@github.com:Vector35/view-macho.git
+[submodule "Shared/cereal"]
+	path = Shared/cereal
+	url = https://github.com/USCiLab/cereal.git

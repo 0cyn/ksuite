@@ -11,7 +11,7 @@ set(BINJA_API_DIR binja)
 project(${PLUGIN_NAME})
 
 add_subdirectory(${BINJA_API_DIR})
-add_subdirectory(Views)
+# add_subdirectory(Views)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
@@ -31,10 +31,12 @@ file (GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 
 list(FILTER SRC_FILES EXCLUDE REGEX "${BINJA_API_DIR}/.*")
 list(FILTER SRC_FILES EXCLUDE REGEX "API/.*")
-list(FILTER SRC_FILES EXCLUDE REGEX "Views/.*")
+list(FILTER SRC_FILES EXCLUDE REGEX "Views/SharedCache/old/.*")
+list(FILTER SRC_FILES EXCLUDE REGEX "Views/MachO/.*")
+list(FILTER SRC_FILES EXCLUDE REGEX "Shared/.*")
 list(FILTER SRC_FILES EXCLUDE REGEX "cmake.*")
 
-set(PLUGIN_SOURCE ${SRC_FILES} UI/priv.h API/ksuiteapi.h Workflows/ObjectiveC.cpp Workflows/ObjectiveC.h Workflows/KSuiteMegaWorkflow.cpp Workflows/KSuiteMegaWorkflow.h)
+set(PLUGIN_SOURCE ${SRC_FILES} UI/priv.h API/ksuiteapi.h Workflows/ObjectiveC.cpp Workflows/ObjectiveC.h Workflows/KSuiteMegaWorkflow.cpp Workflows/KSuiteMegaWorkflow.h API/sharedcache.cpp)
 set("${CMAKE_C_FLAGS} -include${PROJECT_SOURCE_DIR}/Prefix.h")
 
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
@@ -48,7 +50,7 @@ target_link_libraries(${PLUGIN_NAME} binaryninjaapi binaryninjaui Qt6::Core Qt6:
 target_compile_features(${PLUGIN_NAME} PRIVATE cxx_std_17 c_std_99)
 target_compile_definitions(${PLUGIN_NAME} PRIVATE
         DEV_MODE=${DEV_MODE})
-
+target_include_directories(${PLUGIN_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/Shared/cereal/include ${PROJECT_SOURCE_DIR}/API)
 # Library targets linking against the Binary Ninja API need to be compiled with
 # position-independent code on Linux.
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -68,4 +70,4 @@ message(STATUS "")
 
 # Support cmake --install
 bn_install_plugin(${PLUGIN_NAME})
-bn_install_plugin(ksuite-sharedcache)
+# bn_install_plugin(ksuite-sharedcache)

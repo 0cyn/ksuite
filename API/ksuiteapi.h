@@ -227,9 +227,9 @@ namespace KAPI {
 
     class SharedCache {
         Ref<BinaryView> m_view;
-
     public:
         SharedCache(Ref<BinaryView> view);
+
 
         bool LoadImageWithInstallName(std::string installName);
         std::vector<std::string> GetAvailableImages();

@@ -1,14 +1,12 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
-project(ksuite-sharedcache)
+project(kshared)
 file(GLOB SHARED_CACHE_SRCS *.cpp *.h)
 
-add_library(ksuite-sharedcache SHARED ${SHARED_CACHE_SRCS} SharedCache.cpp SharedCache.h)
+add_library(kshared SHARED ${SHARED_CACHE_SRCS} SharedCache.cpp SharedCache.h)
 
-target_include_directories(ksuite-sharedcache
-        PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../Shared/cereal/include)
-
-target_link_libraries(ksuite-sharedcache PUBLIC binaryninjaapi)
+target_include_directories(kshared
+        PUBLIC ${PROJECT_SOURCE_DIR})
 
 set_target_properties(ksuite-sharedcache PROPERTIES
         CXX_STANDARD 17
