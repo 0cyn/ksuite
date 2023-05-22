@@ -83,14 +83,14 @@ MMappedFileAccessor::MMappedFileAccessor(std::string &path) : m_path(path) {
     // BNLogInfo("%s", path.c_str());
     m_mmap.fd = fopen(path.c_str(), "r");
     if (m_mmap.fd == nullptr) {
-        BNLogInfo("Couldn't read file at %s", path.c_str());
+        // BNLogInfo("Couldn't read file at %s", path.c_str());
         throw MissingFileException();
     }
     m_mmap.Map();
 }
 
 MMappedFileAccessor::~MMappedFileAccessor() {
-    BNLogInfo("Unmapping %s", m_path.c_str());
+    // BNLogInfo("Unmapping %s", m_path.c_str());
     m_mmap.Unmap();
     fclose(m_mmap.fd);
 }
@@ -479,21 +479,22 @@ int64_t VMReader::ReadLong() {
     return mapping.first.file->ReadLong(mapping.second);
 }
 
-
 DSCRawView::DSCRawView(const std::string &typeName, BinaryView *data, bool parseOnly)
     : BinaryView(typeName,
-            data->GetFile(),
+                 new FileMetadata(),
             data)
 {
-    m_filename = data->GetFile()->GetFilename();
-}
-
-bool DSCRawView::Init()
-{
+    GetFile()->SetFilename(data->GetFile()->GetFilename());
     auto reader = new BinaryReader(GetParentView());
     reader->Seek(16);
     auto size = reader->Read32();
     AddAutoSegment(0, size, 0, size, SegmentReadable);
+    GetParentView()->WriteBuffer(0, GetParentView()->ReadBuffer(0, size));
+}
+
+bool DSCRawView::Init()
+{
+    //  AddAutoSegment(0, size, 0, size, SegmentReadable);
 
     return true;
 }
@@ -512,6 +513,60 @@ BinaryNinja::Ref<BinaryNinja::BinaryView> DSCRawViewType::Parse(BinaryView* data
 }
 
 bool DSCRawViewType::IsTypeValidForData(BinaryNinja::BinaryView *data)
+{
+    return false;
+    if (!data)
+        return false;
+
+    DataBuffer sig = data->ReadBuffer(data->GetStart(), 4);
+    if (sig.GetLength() != 4)
+        return false;
+
+    const char *magic = (char *) sig.GetData();
+    if (strncmp(magic, "dyld", 4) == 0)
+        return true;
+
+    return false;
+}
+
+
+
+DSCView::DSCView(const std::string &typeName, BinaryView *data, bool parseOnly)
+        : BinaryView(typeName,
+                     data->GetFile(),
+                     data)
+{
+    // m_filename = data->GetFile()->GetFilename();
+}
+
+bool DSCView::Init()
+{
+    auto reader = new BinaryReader(GetParentView());
+    reader->Seek(16);
+    auto size = reader->Read32();
+    //WriteBuffer(0, GetParentView()->ReadBuffer(0, size));
+    AddAutoSegment(0, size, 0, size, SegmentReadable);
+
+    return true;
+}
+
+
+DSCViewType::DSCViewType()
+    : BinaryViewType("DSCView", "DSCView")
+{
+}
+
+BinaryNinja::Ref<BinaryNinja::BinaryView> DSCViewType::Create(BinaryNinja::BinaryView *data)
+{
+    return new DSCView("DSCView", new DSCRawView("DSCRawView", data, false), false);
+}
+
+BinaryNinja::Ref<BinaryNinja::BinaryView> DSCViewType::Parse(BinaryNinja::BinaryView *data)
+{
+    return new DSCView("DSCView", new DSCRawView("DSCRawView", data, true), true);
+}
+
+bool DSCViewType::IsTypeValidForData(BinaryNinja::BinaryView *data)
 {
     if (!data)
         return false;
@@ -768,9 +823,25 @@ std::string SharedCache::Serialize()
 {
     std::stringstream ss;
 
-    cereal::JSONOutputArchive oar(ss);
-    serialize(oar);
-    return ss.str();
+    rapidjson::Document d;
+    d.SetObject();
+
+    rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
+
+    d.AddMember("state", m_viewState, allocator);
+    d.AddMember("cursor", m_rawViewCursor, allocator);
+    rapidjson::Value loadedImages(rapidjson::kArrayType);
+    for (auto img : m_loadedImages)
+    {
+        loadedImages.PushBack(img.second.serialize(allocator), allocator);
+    }
+    d.AddMember("loadedImages", loadedImages, allocator);
+
+    rapidjson::StringBuffer strbuf;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);
+    d.Accept(writer);
+
+    return strbuf.GetString();
 }
 
 void SharedCache::DeserializeFromRawView()
@@ -780,15 +851,25 @@ void SharedCache::DeserializeFromRawView()
         std::string data = m_rawView->GetStringMetadata(SharedCacheMetadataTag);
         std::stringstream ss;
         ss.str(data);
-        cereal::JSONInputArchive iar(ss);
+        rapidjson::Document result(rapidjson::kObjectType);
 
-        iar(m_rawViewCursor);
-        iar(m_viewState);
-        iar(m_loadedImages);
+        result.Parse(data.c_str());
+        m_viewState = static_cast<ViewState>(result["state"].GetUint64());
+        m_rawViewCursor = result["cursor"].GetUint64();
+        for (auto &imgV: result["loadedImages"].GetArray())
+        {
+            if (imgV.HasMember("name"))
+            {
+                auto name = imgV.FindMember("name");
+                if (name != imgV.MemberEnd())
+                    m_loadedImages[name->value.GetString()] = LoadedImage::deserialize(imgV.GetObject());
+            }
+        }
+
     }
     else
     {
-        m_viewState = Unloaded;
+        m_viewState = Loaded;
         m_loadedImages.clear();
         m_rawViewCursor = m_rawView->GetEnd();
     }
@@ -855,7 +936,10 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
     if (!image.headerBase)
         return false;
 
+    m_viewState = LoadedWithImages;
+    m_rawViewCursor = m_rawView->GetEnd();
     auto reader = VMReader(m_vm);
+    reader.Seek(image.headerBase);
     size_t headerStart = reader.Offset();
     auto magic = reader.ReadUInt32(headerStart);
     bool is64 = (magic == MH_MAGIC_64 || magic == MH_CIGAM_64);
@@ -870,8 +954,12 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
             if (lc == LC_SEGMENT_64) {
                 segment_command_64 cmd{};
                 reader.Read(&cmd, off, sizeof(segment_command_64));
-                m_rawView->WriteBuffer(m_rawViewCursor, *reader.ReadBuffer(cmd.vmaddr, cmd.vmsize));
+                if (cmd.vmsize >= 0x1000000)
+                    continue;
+                auto buff = reader.ReadBuffer(cmd.vmaddr, cmd.vmsize);
+                m_rawView->GetParentView()->WriteBuffer(m_rawViewCursor, *buff);
                 image.loadedSegments.push_back({m_rawViewCursor, {cmd.vmaddr, cmd.vmaddr + cmd.vmsize}});
+                m_rawView->AddUserSegment(m_rawViewCursor, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable);
                 m_rawViewCursor = m_rawView->GetEnd();
             }
             off += bump;
@@ -886,8 +974,12 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
             if (lc == LC_SEGMENT) {
                 segment_command cmd{};
                 reader.Read(&cmd, off, sizeof(segment_command));
-                m_rawView->WriteBuffer(m_rawViewCursor, *reader.ReadBuffer(cmd.vmaddr, cmd.vmsize));
+                if (cmd.vmsize >= 0x1000000)
+                    continue;
+                auto buff = reader.ReadBuffer(cmd.vmaddr, cmd.vmsize);
+                m_rawView->GetParentView()->WriteBuffer(m_rawViewCursor, *buff);
                 image.loadedSegments.push_back({m_rawViewCursor, {cmd.vmaddr, cmd.vmaddr + cmd.vmsize}});
+                m_rawView->AddUserSegment(m_rawViewCursor, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable);
                 m_rawViewCursor = m_rawView->GetEnd();
             }
             off += bump;
@@ -943,6 +1035,21 @@ std::vector<std::string> SharedCache::GetAvailableImages()
 
 
 extern "C" {
+
+bool BNDSCViewLoadImageWithInstallName(BNBinaryView* view, char* name)
+{
+    std::string imageName = std::string(name);
+    BNFreeString(name);
+    auto rawView = new BinaryView(view);
+
+    if (auto cache = SharedCache::GetFromRawView(rawView))
+    {
+        return cache->LoadImageWithInstallName(imageName);
+    }
+
+    return false;
+}
+
 char **BNDSCViewGetInstallNames(BNBinaryView *view, size_t *count)
 {
     auto rawView = new BinaryView(view);
@@ -970,9 +1077,9 @@ DSCRawViewType *g_dscRawViewType;
 void InitDSCViewType() {
     static DSCRawViewType rawType;
     BinaryViewType::Register(&rawType);
-    //static DSCViewType type;
-    //BinaryViewType::Register(&type);
-    //g_dscViewType = &type;
+    static DSCViewType type;
+    BinaryViewType::Register(&type);
+    g_dscViewType = &type;
     g_dscRawViewType = &rawType;
 
     PluginCommand::Register("List Images", "List Images", [](BinaryView* view){

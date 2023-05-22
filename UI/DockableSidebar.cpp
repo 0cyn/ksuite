@@ -6,6 +6,7 @@
 #include "binaryninjacore.h"
 #include "ui/theme.h"
 #include "ui/sidebar.h"
+#include "SharedCache/dscwidget.h"
 #include "priv.h"
 #include "xreflist.h"
 #include "typeview.h"
@@ -112,6 +113,7 @@ void ContextSidebarManager::SetupSidebars()
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new ComponentTreeSidebarWidgetType());
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new TypeViewSidebarWidgetType());
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new StringsViewSidebarWidgetType());
+    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new DSCSidebarWidgetType());
 
     m_sidebarForPos[TopRight]->m_containedTypes.push_back(new VariableListSidebarWidgetType());
     m_sidebarForPos[TopRight]->m_containedTypes.push_back(new StackViewSidebarWidgetType());
@@ -730,6 +732,14 @@ void DockableSidebar::UpdateForTypes()
     size_t i = 0;
     for (auto type: m_containedTypes)
     {
+        if (auto extendedType = dynamic_cast<SidebarWidgetTypeExtended*>(type))
+        {
+            Ref<BinaryView> view = m_context->uiContext() && m_context->uiContext()->getCurrentViewFrame()
+                    ? m_context->uiContext()->getCurrentViewFrame()->getCurrentBinaryView()
+                    : nullptr;
+            if (!extendedType->ValidForView(view))
+                continue;
+        }
         auto button = new OrientablePushButton(type->name(), this);
         connect(button, &QPushButton::released, this, [this, button=button, type=type]()
         {

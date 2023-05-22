@@ -32,5 +32,7 @@ extern "C"
 #endif      // __GNUC__C
 
 char** KSUITE_FFI_API BNDSCViewGetInstallNames(BNBinaryView *view, size_t* count);
+bool KSUITE_FFI_API BNDSCViewLoadImageWithInstallName(BNBinaryView* view, char* name);
+
 };
 

@@ -3,33 +3,9 @@
 //
 
 #include <binaryninjaapi.h>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/array.hpp>
-#include <cereal/types/map.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/complex.hpp>
-#include <cereal/archives/json.hpp>
-
-namespace cereal
-{
-    template<class Archive, class F, class S>
-    void save(Archive& ar, const std::pair<F, S>& pair)
-    {
-        ar(pair.first, pair.second);
-    }
-
-    template<class Archive, class F, class S>
-    void load(Archive& ar, std::pair<F, S>& pair)
-    {
-        ar(pair.first, pair.second);
-    }
-
-    template <class Archive, class F, class S>
-    struct specialize<Archive, std::pair<F, S>, cereal::specialization::non_member_load_save> {};
-}
-
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/prettywriter.h"
 
 #ifndef KSUITE_SHAREDCACHE_H
 #define KSUITE_SHAREDCACHE_H
@@ -379,16 +355,10 @@ public:
 class DSCView : public BinaryNinja::BinaryView {
 
 public:
-    uint64_t m_length;
 
     DSCView(const std::string &typeName, BinaryView *data, bool parseOnly = false);
 
-protected:
-    size_t PerformRead(void *dest, uint64_t offset, size_t len) override;
-
-    bool PerformIsOffsetBackedByFile(uint64_t offset) override;
-
-    uint64_t PerformGetLength() const override;
+    bool Init() override;
 };
 
 
@@ -431,28 +401,46 @@ class SharedCache
         std::vector<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> loadedSegments;
         std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> loadedSections;
 
-        friend class cereal::access;
-
-        template <class Archive>
-        void serialize( Archive & ar )
+        rapidjson::Document serialize(rapidjson::Document::AllocatorType& allocator)
         {
-            ar( CEREAL_NVP(name) );
-            ar( CEREAL_NVP(headerBase) );
-            ar( CEREAL_NVP(loadedSegments) );
-            ar( CEREAL_NVP(loadedSections) );
+
+            rapidjson::Document d;
+            d.SetObject();
+
+            rapidjson::Value loadedSegs(rapidjson::kArrayType);
+            for (auto seg : loadedSegments)
+            {
+                rapidjson::Value segV(rapidjson::kArrayType);
+                segV.PushBack(seg.first, allocator);
+                segV.PushBack(seg.second.first, allocator);
+                segV.PushBack(seg.second.second, allocator);
+                loadedSegs.PushBack(segV, allocator);
+            }
+
+            d.AddMember("name",  name, allocator);
+            d.AddMember("headerBase",   headerBase, allocator);
+            d.AddMember("loadedSegments",    loadedSegs, allocator);
+
+            return d;
+        }
+        static LoadedImage deserialize(rapidjson::Value doc)
+        {
+            LoadedImage img;
+            img.name = doc["name"].GetString();
+            img.headerBase = doc["headerBase"].GetUint64();
+            for (auto& seg : doc["loadedSegments"].GetArray())
+            {
+                std::pair<uint64_t, std::pair<uint64_t, uint64_t>> lSeg;
+                lSeg.first = seg.GetArray()[0].GetUint64();
+                lSeg.second.first = seg.GetArray()[1].GetUint64();
+                lSeg.second.second = seg.GetArray()[2].GetUint64();
+                img.loadedSegments.push_back(lSeg);
+            }
+            return img;
         }
     };
     std::map<std::string, LoadedImage> m_loadedImages;
 
-    friend class cereal::access;
-
-    template <class Archive>
-    void serialize( Archive & ar )
-    {
-        ar( CEREAL_NVP((uint8_t) m_viewState) );
-        ar( CEREAL_NVP(m_loadedImages) );
-        ar( CEREAL_NVP(m_rawViewCursor) );
-    }
     /* VIEWSTATE END */
 
     /* API VIEW START */
@@ -493,6 +481,7 @@ public:
         {
             BinaryNinja::Ref<BinaryNinja::Metadata> data = new BinaryNinja::Metadata(Serialize());
             m_rawView->StoreMetadata(SharedCacheMetadataTag, data);
+            BNLogInfo("meta: %s", m_rawView->GetStringMetadata(SharedCacheMetadataTag).c_str());
             return true;
         }
         return false;
