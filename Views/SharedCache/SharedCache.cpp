@@ -1422,6 +1422,8 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
                 if (cmd.vmsize >= 0x8000000)
                     continue;
                 auto buff = reader.ReadBuffer(cmd.vmaddr, cmd.vmsize);
+                // wow this sucks!
+                m_dscView->GetParentView()->GetParentView()->WriteBuffer(m_dscView->GetParentView()->GetParentView()->GetEnd(), *buff);
                 m_dscView->GetParentView()->WriteBuffer(m_rawViewCursor, *buff);
                 image.loadedSegments.push_back({m_rawViewCursor, {cmd.vmaddr, cmd.vmaddr + cmd.vmsize}});
                 m_dscView->GetParentView()->AddUserSegment(m_rawViewCursor, cmd.vmsize, m_rawViewCursor, cmd.vmsize, SegmentReadable);
@@ -1460,6 +1462,8 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
 
     auto h = MachOLoader::HeaderForAddress(m_dscView, image.headerBase, image.name);
     MachOLoader::InitializeHeader(m_dscView, h);
+    if (h.exportTriePresent)
+        MachOLoader::ParseExportTrie(m_vm->MappingAtAddress(h.linkeditSegment.vmaddr).first.file.get(), m_dscView, h);
 
     return true;
 }
@@ -1596,6 +1600,8 @@ MachOLoader::MachOHeader MachOLoader::HeaderForAddress(Ref<BinaryView> data, uin
                     segment64.initprot = reader.Read32();
                     segment64.nsects = reader.Read32();
                     segment64.flags = reader.Read32();
+                    if (strncmp(segment64.segname, "__LINKEDIT", 10) == 0)
+                        header.linkeditSegment = segment64;
                     if (first)
                     {
                         if (!((header.ident.flags & MH_SPLIT_SEGS) || header.ident.cputype == MACHO_CPU_TYPE_X86_64)
@@ -2086,6 +2092,97 @@ void MachOLoader::InitializeHeader(Ref<BinaryView> view, MachOLoader::MachOHeade
     catch (ReadException&)
     {
         LogError("Error when applying Mach-O header types at %" PRIx64, header.textBase);
+    }
+}
+
+std::vector<ExportTrieEntryStart> ReadExportNode(DataBuffer& buffer, std::vector<ExportNode>& results, const std::string& currentText, size_t cursor, uint32_t endGuard)
+{
+    if (cursor > endGuard)
+        throw ReadException();
+
+    uint64_t terminalSize = readValidULEB128(buffer, cursor);
+    if (terminalSize != 0) {
+        uint64_t imageOffset = 0;
+        uint64_t flags = readValidULEB128(buffer, cursor);
+        if (!(flags & EXPORT_SYMBOL_FLAGS_REEXPORT))
+        {
+            imageOffset = readValidULEB128(buffer, cursor);
+            results.push_back({currentText, imageOffset, flags});
+        }
+    }
+    uint8_t childCount = buffer[cursor];
+    cursor++;
+    if (cursor > endGuard)
+        throw ReadException();
+
+    std::vector<ExportTrieEntryStart> entries;
+    for (uint8_t i = 0; i < childCount; ++i)
+    {
+        std::string childText;
+        while (buffer[cursor] != 0 & cursor <= endGuard)
+            childText.push_back(buffer[cursor++]);
+        cursor++;
+        if (cursor > endGuard)
+            throw ReadException();
+        auto next = readValidULEB128(buffer, cursor);
+        if (next == 0)
+            throw ReadException();
+        entries.push_back({currentText + childText, next});
+    }
+    return entries;
+}
+
+void MachOLoader::ParseExportTrie(MMappedFileAccessor* linkeditFile, Ref<BinaryView> view, MachOLoader::MachOHeader header)
+{
+    try {
+        MMappedFileAccessor *reader = linkeditFile;
+
+        std::string startText = "";
+        std::vector<ExportNode> nodes;
+        DataBuffer* buffer = reader->ReadBuffer(header.exportTrie.dataoff, header.exportTrie.datasize);
+        std::deque<ExportTrieEntryStart> entries;
+        entries.push_back({"", 0});
+        while (!entries.empty())
+        {
+            for (std::deque<ExportTrieEntryStart>::iterator it = entries.begin(); it != entries.end();)
+            {
+                ExportTrieEntryStart entry = *it;
+                it = entries.erase(it);
+
+                for (const auto& newEntry : ReadExportNode(*buffer, nodes, entry.currentText,
+                                                           entry.cursorPosition, header.exportTrie.datasize))
+                    entries.push_back(newEntry);
+            }
+        }
+
+        for (const auto &n: nodes) {
+            if (!n.text.empty() && n.offset) {
+                uint32_t flags;
+                BNSymbolType type = DataSymbol;
+                auto found = false;
+                for (auto s: header.sections) {
+                    if (s.addr < n.offset) {
+                        if (s.addr + s.size > n.offset) {
+                            flags = s.flags;
+                            found = true;
+                        }
+                    }
+                }
+                if ((flags & S_ATTR_PURE_INSTRUCTIONS) == S_ATTR_PURE_INSTRUCTIONS ||
+                    (flags & S_ATTR_SOME_INSTRUCTIONS) == S_ATTR_SOME_INSTRUCTIONS)
+                    type = FunctionSymbol;
+                else
+                    type = DataSymbol;
+#if EXPORT_TRIE_DEBUG
+                // BNLogInfo("export: %s -> 0x%llx", n.text.c_str(), image.baseAddress + n.offset);
+#endif
+                // view->DefineMachoSymbol(type, n.text, header.textBase + n.offset, NoBinding, false);
+                BNLogInfo("0x%llx %s", header.textBase + n.offset, n.text.c_str());
+                view->DefineUserSymbol(new Symbol(DataSymbol, n.text, header.textBase + n.offset));
+            }
+        }
+    } catch (std::exception &e) {
+        BNLogError("Failed to load Export Trie");
     }
 }
 

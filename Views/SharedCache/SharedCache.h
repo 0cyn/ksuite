@@ -517,6 +517,7 @@ class MachOLoader {
         uint64_t relocationBase;
         // Section and program headers, internally use 64-bit form as it is a superset of 32-bit
         std::vector<segment_command_64> segments; //only three types of sections __TEXT, __DATA, __IMPORT
+        segment_command_64 linkeditSegment;
         std::vector<section_64> sections;
         std::vector<std::string> sectionNames;
 
@@ -539,6 +540,7 @@ class MachOLoader {
 public:
     static MachOLoader::MachOHeader HeaderForAddress(Ref<BinaryView> data, uint64_t address, std::string identifierPrefix);
     static void InitializeHeader(Ref<BinaryView> view, MachOLoader::MachOHeader header);
+    static void ParseExportTrie(MMappedFileAccessor* linkeditFile, Ref<BinaryView> view, MachOLoader::MachOHeader header);
 };
 
 class ScopedVMMapSession
