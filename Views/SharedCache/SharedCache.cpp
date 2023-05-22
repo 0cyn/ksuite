@@ -574,11 +574,6 @@ bool DSCView::Init()
         return true;
     }
 
-    for (auto segment : GetSegments())
-    {
-        if (!segment->IsAutoDefined())
-            RemoveUserSegment(segment->GetStart(), segment->GetLength());
-    }
     for (auto image : images)
     {
         for (auto seg : image.loadedSegments)
@@ -588,7 +583,7 @@ bool DSCView::Init()
             // we're in deser, we have to rebuild our parent view as well here
             GetParentView()->AddUserSegment(seg.first, seg.second.second, seg.first, seg.second.second, SegmentReadable);
             GetParentView()->WriteBuffer(seg.first, GetParentView()->GetParentView()->ReadBuffer(seg.first, seg.second.second));
-            AddAutoSegment(seg.second.first, seg.second.second, seg.first, seg.second.second, SegmentReadable | SegmentExecutable);
+            //AddAutoSegment(seg.second.first, seg.second.second, seg.first, seg.second.second, SegmentReadable | SegmentExecutable);
 
         }
     }
