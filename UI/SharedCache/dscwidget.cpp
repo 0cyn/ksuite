@@ -309,6 +309,7 @@ void DSCSidebarView::navigateToIndex(const QModelIndex &index) {
     if (reply == QMessageBox::Yes) {
         KAPI::SharedCache* cache = new KAPI::SharedCache(m_data);
         cache->LoadImageWithInstallName(modelItem->m_installName);
+        m_data->UpdateAnalysis();
     }
 
 }

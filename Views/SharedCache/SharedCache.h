@@ -6,6 +6,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
+#include "../MachO/machoview.h"
 
 #ifndef KSUITE_SHAREDCACHE_H
 #define KSUITE_SHAREDCACHE_H
@@ -489,6 +490,55 @@ public:
     std::vector<std::string> GetAvailableImages();
 
     explicit SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> rawView);
+};
+using namespace BinaryNinja;
+class MachOLoader {
+    struct MachOHeader {
+        uint64_t textBase = 0;
+        uint64_t loadCommandOffset = 0;
+        mach_header_64 ident;
+        std::string identifierPrefix;
+
+        std::vector<std::pair<uint64_t, bool>> entryPoints;
+        std::vector<uint64_t> m_entryPoints; //list of entrypoints
+
+        symtab_command symtab;
+        dysymtab_command dysymtab;
+        dyld_info_command dyldInfo;
+        routines_command_64 routines64;
+        function_starts_command functionStarts;
+        std::vector<section_64> moduleInitSections;
+        linkedit_data_command exportTrie;
+        linkedit_data_command chainedFixups {};
+
+        DataBuffer* stringList;
+        size_t stringListSize;
+
+        uint64_t relocationBase;
+        // Section and program headers, internally use 64-bit form as it is a superset of 32-bit
+        std::vector<segment_command_64> segments; //only three types of sections __TEXT, __DATA, __IMPORT
+        std::vector<section_64> sections;
+        std::vector<std::string> sectionNames;
+
+        std::vector<section_64> symbolStubSections;
+        std::vector<section_64> symbolPointerSections;
+
+        std::vector<std::string> dylibs;
+
+        build_version_command buildVersion;
+        std::vector<build_tool_version> buildToolVersions;
+
+        bool dysymPresent = false;
+        bool dyldInfoPresent = false;
+        bool exportTriePresent = false;
+        bool chainedFixupsPresent = false;
+        bool routinesPresent = false;
+        bool functionStartsPresent = false;
+        bool relocatable = false;
+    };
+public:
+    static MachOLoader::MachOHeader HeaderForAddress(Ref<BinaryView> data, uint64_t address, std::string identifierPrefix);
+    static void InitializeHeader(Ref<BinaryView> view, MachOLoader::MachOHeader header);
 };
 
 class ScopedVMMapSession
