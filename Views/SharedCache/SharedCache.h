@@ -3,10 +3,10 @@
 //
 
 #include <binaryninjaapi.h>
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/prettywriter.h"
-#include "../MachO/machoview.h"
+#include "LoadedImage.h"
+#include "DSCView.h"
+#include "VM.h"
+#include "Views/MachO/machoview.h"
 
 #ifndef KSUITE_SHAREDCACHE_H
 #define KSUITE_SHAREDCACHE_H
@@ -112,319 +112,54 @@ struct __attribute__((packed)) dyld_subcache_entry2 {
     char fileExtension[32];
 };
 
+using namespace BinaryNinja;
+struct KMachOHeader {
+    uint64_t textBase = 0;
+    uint64_t loadCommandOffset = 0;
+    mach_header_64 ident;
+    std::string identifierPrefix;
 
-class MissingFileException : public std::exception
-{
-    virtual const char* what() const throw()
-    {
-        return "Missing File.";
-    }
+    std::vector<std::pair<uint64_t, bool>> entryPoints;
+    std::vector<uint64_t> m_entryPoints; //list of entrypoints
+
+    symtab_command symtab;
+    dysymtab_command dysymtab;
+    dyld_info_command dyldInfo;
+    routines_command_64 routines64;
+    function_starts_command functionStarts;
+    std::vector<section_64> moduleInitSections;
+    linkedit_data_command exportTrie;
+    linkedit_data_command chainedFixups {};
+
+    DataBuffer* stringList;
+    size_t stringListSize;
+
+    uint64_t relocationBase;
+    // Section and program headers, internally use 64-bit form as it is a superset of 32-bit
+    std::vector<segment_command_64> segments; //only three types of sections __TEXT, __DATA, __IMPORT
+    segment_command_64 linkeditSegment;
+    std::vector<section_64> sections;
+    std::vector<std::string> sectionNames;
+
+    std::vector<section_64> symbolStubSections;
+    std::vector<section_64> symbolPointerSections;
+
+    std::vector<std::string> dylibs;
+
+    build_version_command buildVersion;
+    std::vector<build_tool_version> buildToolVersions;
+
+    bool dysymPresent = false;
+    bool dyldInfoPresent = false;
+    bool exportTriePresent = false;
+    bool chainedFixupsPresent = false;
+    bool routinesPresent = false;
+    bool functionStartsPresent = false;
+    bool relocatable = false;
 };
 
 
 
-class MemoryException : public std::exception {
-    virtual const char *what() const throw() {
-        return "Memory Limit Reached";
-    }
-};
-
-
-struct MMAP {
-    void *_mmap;
-    FILE *fd;
-    size_t len;
-
-    bool mapped;
-
-    void Map();
-
-    void Unmap();
-};
-
-
-class MMappedFileAccessor {
-    std::string m_path;
-    MMAP m_mmap;
-
-public:
-
-    MMappedFileAccessor(std::string &path);
-
-    ~MMappedFileAccessor();
-
-    std::string Path() const { return m_path; };
-
-    size_t Length() const { return m_mmap.len; };
-
-    void *Data() const { return m_mmap._mmap; };
-
-    std::string ReadNullTermString(size_t address);
-
-    uint8_t ReadUChar(size_t address);
-
-    int8_t ReadChar(size_t address);
-
-    uint16_t ReadUShort(size_t address);
-
-    int16_t ReadShort(size_t address);
-
-    uint32_t ReadUInt32(size_t address);
-
-    int32_t ReadInt32(size_t address);
-
-    uint64_t ReadULong(size_t address);
-
-    int64_t ReadLong(size_t address);
-
-    BinaryNinja::DataBuffer *ReadBuffer(size_t addr, size_t length);
-
-    void Read(void *dest, size_t addr, size_t length);
-};
-
-
-struct PageMapping {
-    std::shared_ptr<MMappedFileAccessor> file;
-    size_t fileOffset;
-    size_t pagesRemaining;
-};
-
-
-class VMException : public std::exception {
-    virtual const char *what() const throw() {
-        return "Generic VM Exception";
-    }
-};
-
-class MappingPageAlignmentException : public VMException {
-    virtual const char *what() const throw() {
-        return "Tried to create a mapping not aligned to given page size";
-    }
-};
-
-class MappingReadException : VMException {
-    virtual const char *what() const throw() {
-        return "Tried to access unmapped page";
-    }
-};
-
-class MappingCollisionException : VMException {
-    virtual const char *what() const throw() {
-        return "Tried to remap a page";
-    }
-};
-
-class VMReader;
-
-
-class VM {
-    std::map<size_t, PageMapping> m_map;
-    size_t m_pageSize;
-    size_t m_pageSizeBits;
-    bool m_safe;
-
-    friend VMReader;
-
-public:
-
-    VM(size_t pageSize, bool safe = true);
-
-    ~VM();
-
-    void MapPages(size_t vm_address, size_t fileoff, size_t size, std::shared_ptr<MMappedFileAccessor> file);
-
-    bool AddressIsMapped(uint64_t address);
-
-    std::pair<PageMapping, size_t> MappingAtAddress(size_t address);
-
-    std::string ReadNullTermString(size_t address);
-
-    uint8_t ReadUChar(size_t address);
-
-    int8_t ReadChar(size_t address);
-
-    uint16_t ReadUShort(size_t address);
-
-    int16_t ReadShort(size_t address);
-
-    uint32_t ReadUInt32(size_t address);
-
-    int32_t ReadInt32(size_t address);
-
-    uint64_t ReadULong(size_t address);
-
-    int64_t ReadLong(size_t address);
-
-    BinaryNinja::DataBuffer *ReadBuffer(size_t addr, size_t length);
-
-    void Read(void *dest, size_t addr, size_t length);
-};
-
-
-class VMReader {
-    std::shared_ptr<VM> m_vm;
-    size_t m_cursor;
-    size_t m_addressSize;
-
-public:
-    VMReader(std::shared_ptr<VM> vm, size_t addressSize = 8);
-
-    void Seek(size_t address);
-
-    void SeekRelative(size_t offset);
-
-    [[nodiscard]] size_t Offset() const { return m_cursor; }
-
-    std::string ReadNullTermString(size_t address);
-
-    uint64_t ReadULEB128(size_t cursorLimit);
-
-    int64_t ReadSLEB128(size_t cursorLimit);
-
-    uint8_t ReadUChar();
-
-    int8_t ReadChar();
-
-    uint16_t ReadUShort();
-
-    int16_t ReadShort();
-
-    uint32_t ReadUInt32();
-
-    int32_t ReadInt32();
-
-    uint64_t ReadULong();
-
-    int64_t ReadLong();
-
-    size_t ReadPointer();
-
-    uint8_t ReadUChar(size_t address);
-
-    int8_t ReadChar(size_t address);
-
-    uint16_t ReadUShort(size_t address);
-
-    int16_t ReadShort(size_t address);
-
-    uint32_t ReadUInt32(size_t address);
-
-    int32_t ReadInt32(size_t address);
-
-    uint64_t ReadULong(size_t address);
-
-    int64_t ReadLong(size_t address);
-
-    size_t ReadPointer(size_t address);
-
-    BinaryNinja::DataBuffer *ReadBuffer(size_t length);
-
-    BinaryNinja::DataBuffer *ReadBuffer(size_t addr, size_t length);
-
-    void Read(void *dest, size_t length);
-
-    void Read(void *dest, size_t addr, size_t length);
-};
-
-
-class DSCRawView : public BinaryNinja::BinaryView {
-    std::string m_filename;
-public:
-
-    DSCRawView(const std::string &typeName, BinaryView *data, bool parseOnly = false);
-
-    bool Init() override;
-};
-
-
-class DSCRawViewType : public BinaryNinja::BinaryViewType {
-
-public:
-    BinaryNinja::Ref<BinaryNinja::BinaryView> Create(BinaryNinja::BinaryView* data) override;
-    BinaryNinja::Ref<BinaryNinja::BinaryView> Parse(BinaryNinja::BinaryView* data) override;
-    bool IsTypeValidForData(BinaryNinja::BinaryView *data) override;
-
-    bool IsDeprecated() override { return false; }
-
-    BinaryNinja::Ref<BinaryNinja::Settings> GetLoadSettingsForData(BinaryNinja::BinaryView *data) override { return nullptr; }
-
-public:
-    DSCRawViewType();
-};
-
-
-class DSCView : public BinaryNinja::BinaryView {
-
-public:
-
-    DSCView(const std::string &typeName, BinaryView *data, bool parseOnly = false);
-
-    bool Init() override;
-};
-
-
-class DSCViewType : public BinaryNinja::BinaryViewType {
-
-public:
-    DSCViewType();
-
-    BinaryNinja::Ref<BinaryNinja::BinaryView> Create(BinaryNinja::BinaryView *data) override;
-
-    BinaryNinja::Ref<BinaryNinja::BinaryView> Parse(BinaryNinja::BinaryView *data) override;
-
-    bool IsTypeValidForData(BinaryNinja::BinaryView *data) override;
-
-    bool IsDeprecated() override { return false; }
-
-    BinaryNinja::Ref<BinaryNinja::Settings> GetLoadSettingsForData(BinaryNinja::BinaryView *data) override { return nullptr; }
-};
-
-struct LoadedImage {
-    std::string name;
-    uint64_t headerBase;
-    std::vector<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> loadedSegments;
-    std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> loadedSections;
-
-    rapidjson::Document serialize(rapidjson::Document::AllocatorType& allocator)
-    {
-
-        rapidjson::Document d;
-        d.SetObject();
-
-        rapidjson::Value loadedSegs(rapidjson::kArrayType);
-        for (auto seg : loadedSegments)
-        {
-            rapidjson::Value segV(rapidjson::kArrayType);
-            segV.PushBack(seg.first, allocator);
-            segV.PushBack(seg.second.first, allocator);
-            segV.PushBack(seg.second.second, allocator);
-            loadedSegs.PushBack(segV, allocator);
-        }
-
-        d.AddMember("name",  name, allocator);
-        d.AddMember("headerBase",   headerBase, allocator);
-        d.AddMember("loadedSegments",    loadedSegs, allocator);
-
-        return d;
-    }
-    static LoadedImage deserialize(rapidjson::Value doc)
-    {
-        LoadedImage img;
-        img.name = doc["name"].GetString();
-        img.headerBase = doc["headerBase"].GetUint64();
-        for (auto& seg : doc["loadedSegments"].GetArray())
-        {
-            std::pair<uint64_t, std::pair<uint64_t, uint64_t>> lSeg;
-            lSeg.first = seg.GetArray()[0].GetUint64();
-            lSeg.second.first = seg.GetArray()[1].GetUint64();
-            lSeg.second.second = seg.GetArray()[2].GetUint64();
-            img.loadedSegments.push_back(lSeg);
-        }
-        return img;
-    }
-};
-
-const std::string SharedCacheMetadataTag = "KSUITE-SharedCacheData";
 class ScopedVMMapSession;
 
 class SharedCache
@@ -452,7 +187,9 @@ class SharedCache
     /* VM READER START */
     bool m_pagesMapped;
     std::shared_ptr<MMappedFileAccessor> m_baseFile;
+public:
     std::shared_ptr<VM> m_vm;
+private:
     std::shared_ptr<VMReader> m_vmReader;
     bool SetupVMMap(bool mapPages = true);
     bool TeardownVMMap();
@@ -486,61 +223,26 @@ public:
         return false;
     }
 
+    uint64_t GetImageStart(std::string installName);
     bool LoadImageWithInstallName(std::string installName);
+    bool LoadSectionAtAddress(uint64_t address);
     std::vector<std::string> GetAvailableImages();
+
+    std::vector<LoadedImage> LoadedImages() const {
+        std::vector<LoadedImage> imgs;
+        for (const auto& [k, v] : m_loadedImages)
+            imgs.push_back(v);
+        return imgs;
+    }
 
     explicit SharedCache(BinaryNinja::Ref<BinaryNinja::BinaryView> rawView);
 };
-using namespace BinaryNinja;
 class MachOLoader {
-    struct MachOHeader {
-        uint64_t textBase = 0;
-        uint64_t loadCommandOffset = 0;
-        mach_header_64 ident;
-        std::string identifierPrefix;
 
-        std::vector<std::pair<uint64_t, bool>> entryPoints;
-        std::vector<uint64_t> m_entryPoints; //list of entrypoints
-
-        symtab_command symtab;
-        dysymtab_command dysymtab;
-        dyld_info_command dyldInfo;
-        routines_command_64 routines64;
-        function_starts_command functionStarts;
-        std::vector<section_64> moduleInitSections;
-        linkedit_data_command exportTrie;
-        linkedit_data_command chainedFixups {};
-
-        DataBuffer* stringList;
-        size_t stringListSize;
-
-        uint64_t relocationBase;
-        // Section and program headers, internally use 64-bit form as it is a superset of 32-bit
-        std::vector<segment_command_64> segments; //only three types of sections __TEXT, __DATA, __IMPORT
-        segment_command_64 linkeditSegment;
-        std::vector<section_64> sections;
-        std::vector<std::string> sectionNames;
-
-        std::vector<section_64> symbolStubSections;
-        std::vector<section_64> symbolPointerSections;
-
-        std::vector<std::string> dylibs;
-
-        build_version_command buildVersion;
-        std::vector<build_tool_version> buildToolVersions;
-
-        bool dysymPresent = false;
-        bool dyldInfoPresent = false;
-        bool exportTriePresent = false;
-        bool chainedFixupsPresent = false;
-        bool routinesPresent = false;
-        bool functionStartsPresent = false;
-        bool relocatable = false;
-    };
 public:
-    static MachOLoader::MachOHeader HeaderForAddress(Ref<BinaryView> data, uint64_t address, std::string identifierPrefix);
-    static void InitializeHeader(Ref<BinaryView> view, MachOLoader::MachOHeader header);
-    static void ParseExportTrie(MMappedFileAccessor* linkeditFile, Ref<BinaryView> view, MachOLoader::MachOHeader header);
+    static KMachOHeader HeaderForAddress(Ref<BinaryView> data, uint64_t address, std::string identifierPrefix);
+    static void InitializeHeader(Ref<BinaryView> view, KMachOHeader header, uint64_t loadOnlySectionWithAddress = 0);
+    static void ParseExportTrie(MMappedFileAccessor* linkeditFile, Ref<BinaryView> view, KMachOHeader header);
 };
 
 class ScopedVMMapSession

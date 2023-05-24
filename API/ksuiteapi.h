@@ -230,8 +230,10 @@ namespace KAPI {
     public:
         SharedCache(Ref<BinaryView> view);
 
-
         bool LoadImageWithInstallName(std::string installName);
+        bool LoadSectionAtAddress(uint64_t addr);
         std::vector<std::string> GetAvailableImages();
+
+        uint64_t LoadedImageCount();
     };
 }

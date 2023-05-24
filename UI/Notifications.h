@@ -14,6 +14,8 @@ class Notifications : public UIContextNotification {
 
     std::unordered_map<UIContext*, ContextSidebarManager*> m_ctxForSidebar;
 
+    std::vector<size_t> m_sessionsAlreadyDisplayedPickerFor;
+
 public:
     virtual void OnContextOpen(UIContext* context) override;
     virtual void OnContextClose(UIContext* context) override;

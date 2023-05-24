@@ -19,6 +19,12 @@ namespace KAPI {
         char* str = BNAllocString(installName.c_str());
         return BNDSCViewLoadImageWithInstallName(m_view->m_object, str);
     }
+    bool SharedCache::LoadSectionAtAddress(uint64_t addr)
+    {
+        if (!m_view->GetParentView())
+            return false;
+        return BNDSCViewLoadSectionAtAddress(m_view->m_object, addr);
+    }
     std::vector<std::string> SharedCache::GetAvailableImages()
     {
         if (!m_view->GetParentView())
@@ -38,5 +44,11 @@ namespace KAPI {
 
         BNFreeStringList(value, count);
         return result;
+    }
+    uint64_t SharedCache::LoadedImageCount()
+    {
+        if (!m_view->GetParentView())
+            return {};
+        return BNDSCViewLoadedImageCount(m_view->m_object);
     }
 };

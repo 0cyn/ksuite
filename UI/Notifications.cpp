@@ -5,8 +5,11 @@
 #include "Notifications.h"
 #include <QLayout>
 #include <QApplication>
+#include <ksuiteapi.h>
 #include "ui/sidebar.h"
+#include <ui/viewframe.h>
 #include "DockableSidebar.h"
+#include "SharedCache/dscpicker.h"
 
 Notifications* Notifications::m_instance = nullptr;
 
@@ -72,5 +75,24 @@ void Notifications::OnViewChange(UIContext *context, ViewFrame *frame, const QSt
     auto ctx = m_ctxForSidebar[context];
     ctx->ResetAllWidgets();
     ctx->UpdateTypes();
+    if (!frame)
+        return;
+
+    auto view = frame->getCurrentBinaryView();
+    if (view && view->GetTypeName() == "DSCView")
+    {
+        // to be safe.
+        if (std::count(m_sessionsAlreadyDisplayedPickerFor.begin(), m_sessionsAlreadyDisplayedPickerFor.end(), view->GetFile()->GetSessionId()) != 0)
+            return;
+        m_sessionsAlreadyDisplayedPickerFor.push_back(view->GetFile()->GetSessionId());
+
+        auto kache = new KAPI::SharedCache(view);
+        if (kache->LoadedImageCount() == 0)
+        {
+            auto initImage = DisplayDSCPicker(context, view);
+            if (!initImage.empty())
+                kache->LoadImageWithInstallName(initImage);
+        }
+    }
 }
 

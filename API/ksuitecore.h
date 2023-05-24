@@ -31,8 +31,16 @@ extern "C"
 	#endif  // _MSC_VER
 #endif      // __GNUC__C
 
+struct BNKCacheImage {
+    char* name;
+    uint64_t start;
+    uint64_t end;
+};
+
 char** KSUITE_FFI_API BNDSCViewGetInstallNames(BNBinaryView *view, size_t* count);
 bool KSUITE_FFI_API BNDSCViewLoadImageWithInstallName(BNBinaryView* view, char* name);
+bool KSUITE_FFI_API BNDSCViewLoadSectionAtAddress(BNBinaryView* view, uint64_t name);
+uint64_t KSUITE_FFI_API BNDSCViewLoadedImageCount(BNBinaryView *view);
 
 };
 

@@ -1,0 +1,13 @@
+diff --git a/ui/metadatachoicedialog.h b/ui/metadatachoicedialog.h
+index aac8da3d..0ebb3f12 100644
+--- a/ui/metadatachoicedialog.h
++++ b/ui/metadatachoicedialog.h
+@@ -225,7 +225,7 @@ public:
+ class BINARYNINJAUIAPI MetadataChoiceDialog : public QDialog, public ManagedTableDelegate, public EntryItemMetadataViewDelegate {
+ 	Q_OBJECT
+ 
+-protected:
++public:
+ 
+ 	std::vector<EntryItem> m_entries;
+ 
