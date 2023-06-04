@@ -501,7 +501,11 @@ bool DSCView::Init()
             {
                 auto name = imgV.FindMember("name");
                 if (name != imgV.MemberEnd())
-                    images.push_back(LoadedImage::deserialize(imgV.GetObject()));
+                {
+                    LoadedImage img;
+                    img.LoadFromValue(imgV);
+                    images.push_back(img);
+                }
             }
         }
     }

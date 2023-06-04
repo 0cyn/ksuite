@@ -7,7 +7,6 @@
 #include "Plugin.h"
 #include "Workflows/ShutUpAboutPAC.h"
 #include "UI/Notifications.h"
-#include "UI/theme/ThemeInjector.h"
 #include "UI/theme/Flattery.h"
 
 void InitDSCViewType();
@@ -27,10 +26,7 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
 BINARYNINJAPLUGIN bool UIPluginInit() {
 
     Notifications::init();
-    g_addThemeJsonFunctionPointer = ThemeInjector::Inject();
-    typedef void (* fnPtr)(const char*);
-    fnPtr ptr = (fnPtr) g_addThemeJsonFunctionPointer;
-    ptr(flatteryJson.c_str());
+    addJsonTheme(flatteryJson.c_str());
     refreshUserThemes();
     setActiveTheme("Flattery - Dark");
 

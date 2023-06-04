@@ -217,7 +217,7 @@ public:
             BinaryNinja::Ref<BinaryNinja::Metadata> data = new BinaryNinja::Metadata(Serialize());
             m_dscView->StoreMetadata(SharedCacheMetadataTag, data);
             m_dscView->GetParentView()->GetParentView()->StoreMetadata(SharedCacheMetadataTag, data);
-            // BNLogInfo("meta: %s", m_dscView->GetStringMetadata(SharedCacheMetadataTag).c_str());
+            BNLogInfo("meta: %s", m_dscView->GetStringMetadata(SharedCacheMetadataTag).c_str());
             return true;
         }
         return false;

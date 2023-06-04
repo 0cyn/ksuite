@@ -110,19 +110,44 @@ void ContextSidebarManager::SetupSidebars()
 
     m_oldSidebar->setVisible(false);
 
+    std::vector<std::string> allTypes;
+
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new ComponentTreeSidebarWidgetType());
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new TypeViewSidebarWidgetType());
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new StringsViewSidebarWidgetType());
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new DSCSidebarWidgetType());
 
+    for (auto type : m_sidebarForPos[TopLeft]->m_containedTypes)
+        allTypes.push_back(type->name().toStdString());
+
     m_sidebarForPos[TopRight]->m_containedTypes.push_back(new VariableListSidebarWidgetType());
     m_sidebarForPos[TopRight]->m_containedTypes.push_back(new StackViewSidebarWidgetType());
     m_sidebarForPos[TopRight]->m_containedTypes.push_back(new MemoryMapSidebarWidgetType());
 
+    for (auto type : m_sidebarForPos[TopRight]->m_containedTypes)
+        allTypes.push_back(type->name().toStdString());
+
     m_sidebarForPos[BottomLeft]->m_containedTypes.push_back(new CrossReferenceSidebarWidgetType());
     m_sidebarForPos[BottomLeft]->m_containedTypes.push_back(new MiniGraphSidebarWidgetType());
 
+    for (auto type : m_sidebarForPos[BottomLeft]->m_containedTypes)
+        allTypes.push_back(type->name().toStdString());
+
     m_sidebarForPos[BottomRight]->m_containedTypes.push_back(new TagListSidebarWidgetType());
+
+    for (auto type : m_sidebarForPos[BottomRight]->m_containedTypes)
+        allTypes.push_back(type->name().toStdString());
+
+    for (auto type : qobject_cast<Sidebar*>(m_oldSidebar)->contentTypes())
+    {
+        if (std::find(allTypes.begin(), allTypes.end(), type->name().toStdString()) == allTypes.end())
+        {
+            m_sidebarForPos[TopLeft]->m_containedTypes.push_back(type);
+            allTypes.push_back(type->name().toStdString());
+        }
+    }
+
+    allTypes.clear();
 
     UpdateTypes();
 }

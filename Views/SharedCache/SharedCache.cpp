@@ -325,7 +325,7 @@ std::string SharedCache::Serialize()
     rapidjson::Value loadedImages(rapidjson::kArrayType);
     for (auto img : m_loadedImages)
     {
-        loadedImages.PushBack(img.second.serialize(allocator), allocator);
+        loadedImages.PushBack(img.second.AsDocument(), allocator);
     }
     d.AddMember("loadedImages", loadedImages, allocator);
 
@@ -354,7 +354,11 @@ void SharedCache::DeserializeFromRawView()
             {
                 auto name = imgV.FindMember("name");
                 if (name != imgV.MemberEnd())
-                    m_loadedImages[name->value.GetString()] = LoadedImage::deserialize(imgV.GetObject());
+                {
+                    LoadedImage img;
+                    img.LoadFromValue(imgV);
+                    m_loadedImages[name->value.GetString()] = img;
+                }
             }
         }
 

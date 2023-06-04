@@ -9,50 +9,25 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
+#include "libkbinja/MetadataSerializable.hpp"
+
 const std::string SharedCacheMetadataTag = "KSUITE-SharedCacheData";
 
-struct LoadedImage {
+struct LoadedImage : public MetadataSerializable {
     std::string name;
     uint64_t headerBase;
     std::vector<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> loadedSegments;
     std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> loadedSections;
 
-    rapidjson::Document serialize(rapidjson::Document::AllocatorType& allocator)
-    {
-
-        rapidjson::Document d;
-        d.SetObject();
-
-        rapidjson::Value loadedSegs(rapidjson::kArrayType);
-        for (auto seg : loadedSegments)
-        {
-            rapidjson::Value segV(rapidjson::kArrayType);
-            segV.PushBack(seg.first, allocator);
-            segV.PushBack(seg.second.first, allocator);
-            segV.PushBack(seg.second.second, allocator);
-            loadedSegs.PushBack(segV, allocator);
-        }
-
-        d.AddMember("name",  name, allocator);
-        d.AddMember("headerBase",   headerBase, allocator);
-        d.AddMember("loadedSegments",    loadedSegs, allocator);
-
-        return d;
+    void Store() override {
+        MSS(name);
+        MSS(headerBase);
+        MSS(loadedSegments);
     }
-    static LoadedImage deserialize(rapidjson::Value doc)
-    {
-        LoadedImage img;
-        img.name = doc["name"].GetString();
-        img.headerBase = doc["headerBase"].GetUint64();
-        for (auto& seg : doc["loadedSegments"].GetArray())
-        {
-            std::pair<uint64_t, std::pair<uint64_t, uint64_t>> lSeg;
-            lSeg.first = seg.GetArray()[0].GetUint64();
-            lSeg.second.first = seg.GetArray()[1].GetUint64();
-            lSeg.second.second = seg.GetArray()[2].GetUint64();
-            img.loadedSegments.push_back(lSeg);
-        }
-        return img;
+    void Load() override {
+        MSL(name);
+        MSL(headerBase);
+        MSL(loadedSegments);
     }
 };
 #endif //KSUITE_LOADEDIMAGE_H
