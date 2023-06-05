@@ -140,7 +140,7 @@ protected:
     }
     void Deserialize(std::string& name, std::vector<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>& b)
     {
-        for (auto& i : m_activeContext->doc[r(name)].GetArray())
+        for (auto& i : m_activeDeserContext->doc[r(name)].GetArray())
         {
             std::pair<uint64_t, std::pair<uint64_t, uint64_t>> j;
             j.first = i.GetArray()[0].GetUint64();
