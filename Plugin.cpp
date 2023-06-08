@@ -8,6 +8,7 @@
 #include "Workflows/ShutUpAboutPAC.h"
 #include "UI/Notifications.h"
 #include "UI/theme/Flattery.h"
+#include "UI/Callgraph/Callgraph.h"
 
 void InitDSCViewType();
 
@@ -29,6 +30,8 @@ BINARYNINJAPLUGIN bool UIPluginInit() {
     addJsonTheme(flatteryJson.c_str());
     refreshUserThemes();
     setActiveTheme("Flattery - Dark");
+
+    CallgraphToolInit();
 
     return true;
 }

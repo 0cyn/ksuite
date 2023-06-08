@@ -10,6 +10,8 @@
 #include <ui/viewframe.h>
 #include "DockableSidebar.h"
 #include "SharedCache/dscpicker.h"
+#include "linearview.h"
+#include "MultiShortcut.h"
 
 Notifications* Notifications::m_instance = nullptr;
 
@@ -64,6 +66,26 @@ void Notifications::OnContextOpen(UIContext* context)
             break;
         }
     }
+    context->globalActions()->bindAction("KSuite", UIAction([](const UIActionContext& ctx){
+        auto ms = new MultiShortcut(ctx, ctx.widget);
+        auto cPos = ctx.widget->cursor().pos();
+        ms->move(cPos);
+        ms->show();
+    }));
+
+    context->mainWindow()->setStyleSheet(context->mainWindow()->styleSheet() + "LinearView QMenu, SidebarWidget QMenu "
+                                                                               "{ "
+                                                                               "    padding: 0px; "
+                                                                               "    border-radius: 7px; "
+                                                                               "    color:transparent; "
+                                                                               "    background-color: transparent;"
+                                                                               "}"
+                                                                               "LinearView QMenu::item, SidebarWidget QMenu::item "
+                                                                               "{"
+                                                                               "    padding: 0px;"
+                                                                               "}");
+
+
 }
 
 void Notifications::OnContextClose(UIContext* context)
@@ -78,6 +100,30 @@ void Notifications::OnViewChange(UIContext *context, ViewFrame *frame, const QSt
     if (!frame)
         return;
 
+    auto widget = frame->getCurrentViewInterface()->widget();
+    if (std::string(widget->metaObject()->className()) == "LinearView"){
+        auto view = qobject_cast<LinearView*>(widget);
+        view->connect(view->m_contextMenuManager, &ContextMenuManager::onOpen, [view=view](){
+            auto pos = view->m_contextMenuManager->m_menu->pos();
+            // save the pos, we already popped up but we tried to make it transparent
+            view->m_contextMenuManager->m_menu->setWindowFlag(Qt::FramelessWindowHint, true);
+            view->m_contextMenuManager->m_menu->setAttribute(Qt::WA_TranslucentBackground, true);
+            view->m_contextMenuManager->m_menu->setStyleSheet("QMenu "
+                                                              "{ "
+                                                              "    padding: 5px 0px 10px 20px;"
+                                                              "    border-color: #2b2b2b; "
+                                                              "    border-radius: 7px; "
+                                                              "    background-color: #2b2b2b;"
+                                                              "    color: #b0b0b0; "
+                                                              "}"
+                                                              "QMenu::item "
+                                                              "{"
+                                                              "    padding: 5px 0px 5px 0px;"
+                                                              "}");
+            // popup again because we just borked the last one
+            view->m_contextMenuManager->m_menu->popup(pos);
+        });
+    }
     auto view = frame->getCurrentBinaryView();
     if (view && view->GetTypeName() == "DSCView")
     {

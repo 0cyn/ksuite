@@ -14,12 +14,11 @@ std::string DisplayDSCPicker(UIContext* ctx, Ref<BinaryView> dscView)
     KAPI::SharedCache* kache = new KAPI::SharedCache(dscView);
 
     for (auto img : kache->GetAvailableImages())
-    {
         entries.push_back(QString::fromStdString(img));
-    }
 
     auto choiceDialog = new MetadataChoiceDialog(ctx->mainWindow(), "Pick Image", entries);
     choiceDialog->AddWidthRequiredByItem(ctx, 300);
+    choiceDialog->AddHeightRequiredByItem(ctx, 150);
     choiceDialog->exec();
 
     if (choiceDialog->GetChosenEntry().has_value())

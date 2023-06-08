@@ -9,10 +9,6 @@ It is not officially associated or affiliated with Vector35 in any capacity.
 Sidebars support all 4 positions (at the 4 corners of the screen,) and widgets
 can be moved around.
 
-#### ARM Manual
-
-Embedded ARM Manual in the right-sidebar
-
 ## Binary Views
 
 ### KernelCacheView

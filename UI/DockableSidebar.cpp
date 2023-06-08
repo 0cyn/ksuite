@@ -581,6 +581,35 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
         }
     }
 
+    SidebarWidget* widg;
+    if (top)
+        widg = m_topContents->widget();
+    else
+        widg = m_bottomContents->widget();
+    if (widg)
+    {
+        widg->connect(widg->m_contextMenuManager, &ContextMenuManager::onOpen, m_topContents, [widg=widg](){
+            auto pos = widg->m_contextMenuManager->m_menu->pos();
+            // save the pos, we already popped up but we tried to make it transparent
+            widg->m_contextMenuManager->m_menu->setWindowFlag(Qt::FramelessWindowHint, true);
+            widg->m_contextMenuManager->m_menu->setAttribute(Qt::WA_TranslucentBackground, true);
+            widg->m_contextMenuManager->m_menu->setStyleSheet("QMenu "
+                                                              "{ "
+                                                              "    padding: 5px 0px 10px 20px;"
+                                                              "    border-color: #2b2b2b; "
+                                                              "    border-radius: 7px; "
+                                                              "    background-color: #2b2b2b;"
+                                                              "    color: #b0b0b0; "
+                                                              "}"
+                                                              "QMenu::item "
+                                                              "{"
+                                                              "    padding: 5px 0px 5px 0px;"
+                                                              "}");
+            // popup again because we just borked the last one
+            widg->m_contextMenuManager->m_menu->popup(pos);
+        });
+    }
+
     repaint();
 }
 

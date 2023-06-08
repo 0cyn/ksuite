@@ -212,19 +212,29 @@ std::vector<DSCObjC::Class *> ObjCProcessing::GetClassList(KMachOHeader &image) 
 
     for (auto cpt: classPtrs) {
         //// BNLogInfo("0x%llx", cpt);
-        DSCObjC::Class *c = new DSCObjC::Class;
-        DSCObjC::ClassRO *ro = new DSCObjC::ClassRO;
-        c->isa = reader->ReadULong(cpt) & 0x1ffffffff;
-        c->super = reader->ReadULong() & 0x1ffffffff;
-        reader->ReadULong();
-        reader->ReadULong();
-        uint64_t ro_addr = reader->ReadULong() & 0x1ffffffff;
+        try {
+            DSCObjC::Class *c = new DSCObjC::Class;
+            DSCObjC::ClassRO *ro = new DSCObjC::ClassRO;
+            c->isa = reader->ReadULong(cpt) & 0x1ffffffff;
+            c->super = reader->ReadULong() & 0x1ffffffff;
+            reader->ReadULong();
+            reader->ReadULong();
+            uint64_t ro_addr = reader->ReadULong() & 0x1ffffffff;
+            if (!m_vm->AddressIsMapped(ro_addr))
+            {
+                ro_addr = ro_addr + reader->Offset()-8;
+            }
 
-        ro->name = (reader->ReadULong(ro_addr + 24)) & 0x1ffffffff;
-        ro->methods = (reader->ReadULong(ro_addr + 32)) & 0x1ffffffff;
+            ro->name = (reader->ReadULong(ro_addr + 24)) & 0x1ffffffff;
+            ro->methods = (reader->ReadULong(ro_addr + 32)) & 0x1ffffffff;
 
-        c->ro_data = ro;
-        classes.push_back(c);
+            c->ro_data = ro;
+            classes.push_back(c);
+        }
+        catch (MappingReadException& ex)
+        {
+            BNLogError("Failed to load Obj-C Class at 0x%llx", cpt);
+        }
     }
     return classes;
 }
@@ -358,7 +368,15 @@ void ObjCProcessing::ApplyMethodType(std::string className, std::string sel, std
 void ObjCProcessing::LoadObjCMetadata(KMachOHeader &image) {
     if (!m_typesLoaded)
         LoadTypes();
-    auto classes = GetClassList(image);
+    std::vector<DSCObjC::Class *> classes;
+    //try {
+        classes = GetClassList(image);
+    //}
+    //catch (...)
+    //{
+    //    BNLogError("Error reading Obj-C Metadata");
+    //    return;
+    //}
 
     for (auto c: classes) {
         //// BNLogInfo("%s", m_cache->m_vm->ReadNullTermString(c->ro_data->name).c_str());

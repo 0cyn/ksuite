@@ -7,22 +7,36 @@
 #include "MultiShortcut.h"
 
 
-MultiShortcut::MultiShortcut(UIActionContext* ctx, QWidget* parent)
+MultiShortcut::MultiShortcut(UIActionContext ctx, QWidget* parent)
+    : QWidget(parent)
 {
-    setFixedSize(500, 500);
+    setObjectName("multiShortcut");
+    setWindowFlags(Qt::FramelessWindowHint | Qt::Popup);
+    setFocusPolicy(Qt::ClickFocus);
+    setFixedSize(300, 300);
+    setAttribute(Qt::WA_TranslucentBackground);
+    setStyleSheet("QWidget {"
+                  "border-radius: 7px;"
+                  "background-color: #202020;"
+                  "}");
     auto layout = new QGridLayout();
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 9; i++)
     {
+        if (i == 4)
+            continue;
         auto button = new QWidget(this);
         button->setLayout(new QVBoxLayout());
         auto nameLab = new QLabel();
         nameLab->setText(QString::fromStdString("Bind " + std::to_string(i)));
+        nameLab->setAlignment(Qt::AlignCenter);
         button->layout()->addWidget(nameLab);
         auto keyLab = new QLabel();
-        nameLab->setText(QString::fromStdString(std::to_string(i)));
+        keyLab->setText(QString::fromStdString(std::to_string(i)));
+        keyLab->setStyleSheet("QLabel {opacity: 0.9;}");
+        keyLab->setAlignment(Qt::AlignCenter);
         button->layout()->addWidget(keyLab);
-        button->layout()->itemAt(1)->widget()->setStyleSheet("QLabel {opacity: 0.5;}");
-        button->setFixedSize(500/3-20, 500/3-20);
+        //button->layout()->itemAt(1)->widget()->setStyleSheet("QLabel {opacity: 0.9;}");
+        button->setFixedSize(80, 80);
         m_wheelItems.push_back(button);
         layout->addWidget(button, i / 3, i % 3);
     }
