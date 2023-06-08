@@ -11,7 +11,8 @@
 #include "DockableSidebar.h"
 #include "SharedCache/dscpicker.h"
 #include "linearview.h"
-#include "MultiShortcut.h"
+#include "Actions/MultiShortcut.h"
+#include "Actions/Actions.h"
 
 Notifications* Notifications::m_instance = nullptr;
 
@@ -66,12 +67,7 @@ void Notifications::OnContextOpen(UIContext* context)
             break;
         }
     }
-    context->globalActions()->bindAction("KSuite", UIAction([](const UIActionContext& ctx){
-        auto ms = new MultiShortcut(ctx, ctx.widget);
-        auto cPos = ctx.widget->cursor().pos();
-        ms->move(cPos);
-        ms->show();
-    }));
+    RegisterActions(context);
 
     context->mainWindow()->setStyleSheet(context->mainWindow()->styleSheet() + "LinearView QMenu, SidebarWidget QMenu "
                                                                                "{ "
