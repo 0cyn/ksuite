@@ -58,4 +58,12 @@ void MultiShortcut::setActionForItemIndex(size_t idx, MultiShortcutItem* item)
     nameLab->setText(item->text);
     auto bindLab = qobject_cast<QLabel*>(button->layout()->itemAt(1)->widget());
     bindLab->setText(QKeySequence(item->keybind->key()).toString());
+
+    if (!m_ctx.context->contentActionHandler() || !m_ctx.context->contentActionHandler()->isValidAction(QString::fromStdString(item->action)))
+    {
+        m_actions[idx]->valid = false;
+        button->setEnabled(false);
+        button->layout()->itemAt(0)->widget()->setStyleSheet("QLabel {opacity: 0.5;}");
+        button->layout()->itemAt(1)->widget()->setStyleSheet("QLabel {opacity: 0.5;}");
+    }
 }

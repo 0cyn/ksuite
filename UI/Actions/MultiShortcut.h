@@ -26,6 +26,8 @@ public:
         MultiShortcutItem(std::string action, QKeyCombination* keybind, QString text)
             : action(action), keybind(keybind), text(text)
         {}
+    public:
+        bool valid = true;
     };
 private:
     std::vector<MultiShortcutItem*> m_actions;
@@ -49,7 +51,8 @@ public:
                 close();
                 releaseKeyboard();
                 m_ctx.context->mainWindow()->setFocus();
-                executeItemForIndex(i);
+                if (action->valid)
+                    executeItemForIndex(i);
                 return;
             }
             i++;
