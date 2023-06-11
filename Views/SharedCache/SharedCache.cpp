@@ -78,15 +78,11 @@ bool SharedCache::SetupVMMap(bool mapPages)
     if (sig.GetLength() != 4)
         return false;
     const char *magic = (char *) sig.GetData();
-    if (strncmp(magic, "dyld", 4) == 0)
-    {
-    }
-    else
+    if (strncmp(magic, "dyld", 4) != 0)
         return false;
     if (mapPages)
     {
         auto format = GetCacheFormat();
-
 
         dyld_cache_header header{};
         size_t header_size = m_baseFile->ReadUInt32(16);
@@ -340,28 +336,7 @@ void SharedCache::DeserializeFromRawView()
 {
     if (m_dscView->QueryMetadata(SharedCacheMetadataTag))
     {
-        std::string data = m_dscView->GetStringMetadata(SharedCacheMetadataTag);
-        std::stringstream ss;
-        ss.str(data);
-        rapidjson::Document result(rapidjson::kObjectType);
-
-        result.Parse(data.c_str());
-        m_viewState = static_cast<ViewState>(result["state"].GetUint64());
-        m_rawViewCursor = result["cursor"].GetUint64();
-        for (auto &imgV: result["loadedImages"].GetArray())
-        {
-            if (imgV.HasMember("name"))
-            {
-                auto name = imgV.FindMember("name");
-                if (name != imgV.MemberEnd())
-                {
-                    LoadedImage img;
-                    img.LoadFromValue(imgV);
-                    m_loadedImages[name->value.GetString()] = img;
-                }
-            }
-        }
-
+        LoadFromString(m_dscView->GetStringMetadata(SharedCacheMetadataTag));
     }
     else
     {

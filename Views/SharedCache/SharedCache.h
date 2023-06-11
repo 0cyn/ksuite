@@ -162,7 +162,7 @@ struct KMachOHeader {
 
 class ScopedVMMapSession;
 
-class SharedCache
+class SharedCache : public MetadataSerializable
 {
     friend ScopedVMMapSession;
     /* VIEW STATE BEGIN -- SERIALIZE ALL OF THIS AND STORE IT IN RAW VIEW */
@@ -174,7 +174,6 @@ class SharedCache
         Loaded,
         LoadedWithImages,
     } m_viewState;
-
 
     std::map<std::string, LoadedImage> m_loadedImages;
 
@@ -189,6 +188,42 @@ class SharedCache
     std::shared_ptr<MMappedFileAccessor> m_baseFile;
 public:
     std::shared_ptr<VM> m_vm;
+
+    void Store() override {
+        MSS(m_viewState);
+        MSS(m_rawViewCursor);
+        rapidjson::Value loadedImages(rapidjson::kArrayType);
+        for (auto img : m_loadedImages)
+        {
+            loadedImages.PushBack(img.second.AsDocument(), m_activeContext->allocator);
+        }
+        m_activeContext->doc.AddMember("loadedImages", loadedImages, m_activeContext->allocator);
+
+    }
+    ViewState loadViewState(std::string x)
+    {
+        uint8_t val;
+        Deserialize(x, val);
+        return (ViewState)val;
+    }
+    void Load() override {
+        m_viewState = loadViewState("m_viewState");
+        MSL(m_rawViewCursor);
+        for (auto &imgV: m_activeDeserContext->doc["loadedImages"].GetArray())
+        {
+            if (imgV.HasMember("name"))
+            {
+                auto name = imgV.FindMember("name");
+                if (name != imgV.MemberEnd())
+                {
+                    LoadedImage img;
+                    img.LoadFromValue(imgV);
+                    m_loadedImages[name->value.GetString()] = img;
+                }
+            }
+        }
+    }
+
 private:
     std::shared_ptr<VMReader> m_vmReader;
     bool SetupVMMap(bool mapPages = true);
@@ -214,7 +249,7 @@ public:
     {
         if (m_dscView)
         {
-            BinaryNinja::Ref<BinaryNinja::Metadata> data = new BinaryNinja::Metadata(Serialize());
+            auto data = AsMetadata();
             m_dscView->StoreMetadata(SharedCacheMetadataTag, data);
             m_dscView->GetParentView()->GetParentView()->StoreMetadata(SharedCacheMetadataTag, data);
             BNLogInfo("meta: %s", m_dscView->GetStringMetadata(SharedCacheMetadataTag).c_str());

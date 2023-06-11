@@ -30,45 +30,53 @@ DSCContentsModelItem::DSCContentsModelItem(DSCContentsModelItem *parent) : DSCCo
 DSCContentsModelItem::DSCContentsModelItem(BinaryViewRef view, std::string name, std::string installName,
                                            DSCContentsModelItem *parent) : m_bv(view), m_name(name),
                                                                            m_installName(installName),
-                                                                           m_parent(parent) {
+                                                                           m_parent(parent)
+{
     if (!installName.empty())
         m_type = ImageModelItem;
     else
         m_type = FolderModelItem;
 }
 
-QString DSCContentsModelItem::displayName() const {
+QString DSCContentsModelItem::displayName() const
+{
     return QString::fromStdString(m_name);
 }
 
-size_t DSCContentsModelItem::childCount() const {
+size_t DSCContentsModelItem::childCount() const
+{
     return m_children.size();
 }
 
-DSCContentsModelItem *DSCContentsModelItem::child(size_t index) {
+DSCContentsModelItem *DSCContentsModelItem::child(size_t index)
+{
     if (index < 0 || index >= m_children.size())
         return nullptr;
 
     return m_children[index];
 }
 
-void DSCContentsModelItem::addChild(DSCContentsModelItem *item) {
+void DSCContentsModelItem::addChild(DSCContentsModelItem *item)
+{
     item->m_parent = this;
     m_children.push_back(item);
 }
 
-DSCContentsModelItem *DSCContentsModelItem::parent() const {
+DSCContentsModelItem *DSCContentsModelItem::parent() const
+{
     return m_parent;
 }
 
-size_t DSCContentsModelItem::row() const {
+size_t DSCContentsModelItem::row() const
+{
     if (!m_parent)
         return 0;
     auto it = std::find(m_parent->m_children.begin(), m_parent->m_children.end(), this);
     return it - m_parent->m_children.begin();
 }
 
-QVariant DSCContentsModelItem::data(int column) const {
+QVariant DSCContentsModelItem::data(int column) const
+{
     switch (column) {
         case DSCContentsModel::NameColumn:
             return displayName();
@@ -78,7 +86,8 @@ QVariant DSCContentsModelItem::data(int column) const {
     }
 }
 
-QImage DSCContentsModelItem::icon() const {
+QImage DSCContentsModelItem::icon() const
+{
     auto kind = data(DSCContentsModel::KindColumn).toString();
     auto icon = QImage(":/icons/images/ComponentTree_" + kind + ".png");
 
@@ -87,12 +96,14 @@ QImage DSCContentsModelItem::icon() const {
 
 //===-- DSCContentsModel ----------------------------------------------------===//
 
-DSCContentsModel::DSCContentsModel(BinaryViewRef bv, QObject *parent) : QAbstractItemModel(parent), m_bv(bv) {
+DSCContentsModel::DSCContentsModel(BinaryViewRef bv, QObject *parent) : QAbstractItemModel(parent), m_bv(bv)
+{
     m_cache = new KAPI::SharedCache(bv);
     refresh();
 }
 
-struct ItemNode {
+struct ItemNode
+{
     ItemNode *parent = nullptr;
     std::string fullPath;
     std::string path;
@@ -100,16 +111,21 @@ struct ItemNode {
     std::unordered_map<std::string, ItemNode *> edges{};
 };
 
-std::vector<std::string> split(std::string str, std::string token) {
+std::vector<std::string> split(std::string str, std::string token)
+{
     std::vector<std::string> result;
-    while (str.size()) {
+    while (str.size())
+    {
         int index = str.find(token);
-        if (index != std::string::npos) {
+        if (index != std::string::npos)
+        {
             result.push_back(str.substr(0, index));
             str = str.substr(index + token.size());
             if (str.size() == 0)
                 result.push_back(str);
-        } else {
+        }
+        else
+        {
             result.push_back(str);
             str = "";
         }
@@ -117,7 +133,8 @@ std::vector<std::string> split(std::string str, std::string token) {
     return result;
 }
 
-void DSCContentsModel::refresh() {
+void DSCContentsModel::refresh()
+{
     std::scoped_lock<std::mutex> lock(m_updateMutex);
 
     // Using `{begin,end}ResetModel` here is not ideal and is a temporary
@@ -130,22 +147,23 @@ void DSCContentsModel::refresh() {
 
     m_root = new DSCContentsModelItem();
 
-    std::unordered_map<std::string, DSCContentsModelItem*> folders {};
+    std::unordered_map<std::string, DSCContentsModelItem *> folders{};
     folders["/"] = m_root;
-    for (const auto& iname : inames)
+    for (const auto &iname: inames)
     {
         auto pathItems = split(iname, "/");
         pathItems.pop_back(); // skip filenames
         std::string fullPath = "/";
 
-        for (const auto& item : pathItems) {
+        for (const auto &item: pathItems)
+        {
             if (item.empty())
                 continue;
             auto parentPath = fullPath;
             fullPath += item + "/";
             if (folders.count(fullPath) == 0) {
                 auto pnode = folders.at(parentPath);
-                auto* nnode = new DSCContentsModelItem(m_bv, item, "", pnode);
+                auto *nnode = new DSCContentsModelItem(m_bv, item, "", pnode);
                 pnode->addChild(nnode);
                 folders[fullPath] = nnode;
             }
@@ -154,25 +172,23 @@ void DSCContentsModel::refresh() {
 
     // Ok, all our folders are in place. Put files in them.
 
-    for (const auto& iname : inames)
+    for (const auto &iname: inames)
     {
         auto file = fs::path(iname).filename().string();
         auto folderName = fs::path(iname).parent_path().string() + "/";
-        if (auto folder = folders.find(folderName); folder != folders.end())
-        {
-            auto* nnode = new DSCContentsModelItem(m_bv, file, iname, folder->second);
+        if (auto folder = folders.find(folderName); folder != folders.end()) {
+            auto *nnode = new DSCContentsModelItem(m_bv, file, iname, folder->second);
             folder->second->addChild(nnode);
-        }
-        else
-            BNLogError("DSCView Sidebar Logic Error: Couldn't find folder for %s %s %s",
-                       iname.c_str(), file.c_str(), folderName.c_str());
-
+        } else
+            BNLogError("DSCView Sidebar Logic Error: Couldn't find folder for %s %s %s", iname.c_str(), file.c_str(),
+                       folderName.c_str());
     }
 
     endResetModel();
 }
 
-QModelIndex DSCContentsModel::index(int row, int column, const QModelIndex &parentIndex) const {
+QModelIndex DSCContentsModel::index(int row, int column, const QModelIndex &parentIndex) const
+{
     if (!hasIndex(row, column, parentIndex))
         return QModelIndex();
 
@@ -191,7 +207,8 @@ QModelIndex DSCContentsModel::index(int row, int column, const QModelIndex &pare
     return QModelIndex();
 }
 
-QModelIndex DSCContentsModel::parent(const QModelIndex &index) const {
+QModelIndex DSCContentsModel::parent(const QModelIndex &index) const
+{
     if (!index.isValid())
         return QModelIndex();
 
@@ -203,11 +220,16 @@ QModelIndex DSCContentsModel::parent(const QModelIndex &index) const {
     return createIndex(parent->row(), 0, parent);
 }
 
-QVariant DSCContentsModel::headerData(int section, Qt::Orientation orientation, int role) const {
-    if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-        switch (section) {
+QVariant DSCContentsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
+    {
+        switch (section)
+        {
             case DSCContentsModel::NameColumn:
                 return "Name";
+            default:
+                return "";
         }
     }
 
@@ -216,7 +238,8 @@ QVariant DSCContentsModel::headerData(int section, Qt::Orientation orientation, 
 
 constexpr int ComponentGuidDataRole = 64;
 
-QVariant DSCContentsModel::data(const QModelIndex &index, int role) const {
+QVariant DSCContentsModel::data(const QModelIndex &index, int role) const
+{
     if (!index.isValid())
         return QVariant();
 
@@ -224,7 +247,8 @@ QVariant DSCContentsModel::data(const QModelIndex &index, int role) const {
     if (!item)
         return {};
 
-    switch (role) {
+    switch (role)
+    {
         case Qt::DisplayRole:
             return item->data(index.column());
         default:
@@ -232,11 +256,13 @@ QVariant DSCContentsModel::data(const QModelIndex &index, int role) const {
     }
 }
 
-bool DSCContentsModel::setData(const QModelIndex &index, const QVariant &value, int role) {
+bool DSCContentsModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
     return false;
 }
 
-Qt::ItemFlags DSCContentsModel::flags(const QModelIndex &index) const {
+Qt::ItemFlags DSCContentsModel::flags(const QModelIndex &index) const
+{
     if (!index.isValid())
         return Qt::ItemIsDropEnabled; // Root node
 
@@ -246,7 +272,8 @@ Qt::ItemFlags DSCContentsModel::flags(const QModelIndex &index) const {
 }
 
 
-int DSCContentsModel::rowCount(const QModelIndex &parent) const {
+int DSCContentsModel::rowCount(const QModelIndex &parent) const
+{
     DSCContentsModelItem *item;
     if (!parent.isValid())
         item = m_root;
@@ -256,11 +283,13 @@ int DSCContentsModel::rowCount(const QModelIndex &parent) const {
     return item->childCount();
 }
 
-int DSCContentsModel::columnCount(const QModelIndex &parent) const {
+int DSCContentsModel::columnCount(const QModelIndex &parent) const
+{
     return 1;
 }
 
-Qt::DropActions DSCContentsModel::supportedDropActions() const {
+Qt::DropActions DSCContentsModel::supportedDropActions() const
+{
     return Qt::IgnoreAction;
 }
 
@@ -268,11 +297,13 @@ Qt::DropActions DSCContentsModel::supportedDropActions() const {
 //===-- ComponentFilterModel ----------------------------------------------===//
 
 DSCFilterModel::DSCFilterModel(BinaryViewRef data, QObject *parent) : QSortFilterProxyModel(parent),
-                                                                      m_model(new DSCContentsModel(data)) {
+                                                                      m_model(new DSCContentsModel(data))
+                                                                      {
     setSourceModel(m_model);
 }
 
-bool DSCFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {
+bool DSCFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
+{
     auto index = sourceModel()->index(sourceRow, 0, sourceParent);
     if (!index.isValid())
         return false;
@@ -281,19 +312,22 @@ bool DSCFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourcePa
 }
 
 DSCSidebarView::DSCSidebarView(ViewFrame *frame, BinaryViewRef data, QWidget *parent) : QTreeView(parent), m_data(data),
-                                                                                        m_frame(frame), m_parent(parent) {
+                                                                                        m_frame(frame),
+                                                                                        m_parent(parent)
+{
     connect(this, &DSCSidebarView::doubleClicked, this, &DSCSidebarView::navigateToIndex);
 
     setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this, &DSCSidebarView::customContextMenuRequested, [this](const QPoint &p) {
-        auto menu = createContextMenu();
-        menu->popup(viewport()->mapToGlobal(p));
-    });
+    connect(this, &DSCSidebarView::customContextMenuRequested,
+            [this](const QPoint &p) {
+                    auto menu = createContextMenu();
+                    menu->popup(viewport()->mapToGlobal(p));
+        });
 }
 
 
-void DSCSidebarView::navigateToIndex(const QModelIndex &index) {
-
+void DSCSidebarView::navigateToIndex(const QModelIndex &index)
+{
     auto filterParent = static_cast<DSCSidebarWidget *>(m_parent);
     if (!filterParent)
         return;
@@ -304,17 +338,19 @@ void DSCSidebarView::navigateToIndex(const QModelIndex &index) {
 
     QMessageBox::StandardButton reply;
     reply = QMessageBox::question(this, "Load Image", "Load " + QString::fromStdString(modelItem->m_name) + "?",
-                                  QMessageBox::Yes|QMessageBox::No);
+                                  QMessageBox::Yes | QMessageBox::No);
 
-    if (reply == QMessageBox::Yes) {
-        KAPI::SharedCache* cache = new KAPI::SharedCache(m_data);
+    if (reply == QMessageBox::Yes)
+    {
+        KAPI::SharedCache *cache = new KAPI::SharedCache(m_data);
         cache->LoadImageWithInstallName(modelItem->m_installName);
         m_data->UpdateAnalysis();
     }
 
 }
 
-QMenu *DSCSidebarView::createContextMenu() {
+QMenu *DSCSidebarView::createContextMenu()
+{
     auto menu = new QMenu();
 
     return menu;
@@ -322,8 +358,10 @@ QMenu *DSCSidebarView::createContextMenu() {
 
 //===-- ComponentTree -----------------------------------------------------===//
 
-DSCSidebarWidget::DSCSidebarWidget(ViewFrame *frame, BinaryViewRef data) : SidebarWidget("dyld_shared_cache"), m_data(data),
-                                                                           m_frame(frame), m_header(new QWidget) {
+DSCSidebarWidget::DSCSidebarWidget(ViewFrame *frame, BinaryViewRef data) : SidebarWidget("dyld_shared_cache"),
+                                                                           m_data(data), m_frame(frame),
+                                                                           m_header(new QWidget)
+{
     auto view = data;
     m_tree = new DSCSidebarView(frame, view, this);
     m_model = new DSCFilterModel(view);
@@ -352,7 +390,8 @@ DSCSidebarWidget::DSCSidebarWidget(ViewFrame *frame, BinaryViewRef data) : Sideb
 
 //===-- ComponentTree - FilterTarget --------------------------------------===//
 
-void DSCSidebarWidget::setFilter(const std::string &filter) {
+void DSCSidebarWidget::setFilter(const std::string &filter)
+{
     m_model->setFilterFixedString(QString::fromStdString(filter));
 }
 
@@ -366,7 +405,8 @@ void DSCSidebarWidget::activateFirstItem() {}
 
 //===-- DSCSidebarWidget - SidebarWidget -------------------------------------===//
 
-QWidget *DSCSidebarWidget::headerWidget() {
+QWidget *DSCSidebarWidget::headerWidget()
+{
     return m_header;
 }
 
@@ -388,6 +428,7 @@ QImage temporaryIcon() {
 
 DSCSidebarWidgetType::DSCSidebarWidgetType() : SidebarWidgetType(temporaryIcon(), "Shared Cache") {}
 
-SidebarWidget *DSCSidebarWidgetType::createWidget(ViewFrame *frame, BinaryViewRef data) {
+SidebarWidget *DSCSidebarWidgetType::createWidget(ViewFrame *frame, BinaryViewRef data)
+{
     return new DSCSidebarWidget(frame, data);
 }

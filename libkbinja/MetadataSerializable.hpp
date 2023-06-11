@@ -16,6 +16,7 @@
 using namespace BinaryNinja;
 
 class MetadataSerializable {
+protected:
     struct SerialContext {
         rapidjson::Document doc;
         rapidjson::Document::AllocatorType allocator;
