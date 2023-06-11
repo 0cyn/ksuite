@@ -512,7 +512,7 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
         return false;
     }
 
-    m_dscView->BeginUndoActions();
+    auto id = m_dscView->BeginUndoActions();
     m_rawViewCursor = m_dscView->GetParentView()->GetEnd();
     auto reader = VMReader(m_vm);
     reader.Seek(image.headerBase);
@@ -543,7 +543,7 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
     m_dscView->UpdateAnalysis();
     TeardownVMMap();
 
-    m_dscView->CommitUndoActions();
+    m_dscView->CommitUndoActions(id);
 
     return true;
 }
@@ -607,7 +607,7 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
         return false;
     }
 
-    m_dscView->BeginUndoActions();
+    auto id = m_dscView->BeginUndoActions();
     m_viewState = LoadedWithImages;
     m_rawViewCursor = m_dscView->GetParentView()->GetEnd();
     auto reader = VMReader(m_vm);
@@ -686,7 +686,7 @@ bool SharedCache::LoadImageWithInstallName(std::string installName)
     m_dscView->UpdateAnalysis();
     TeardownVMMap();
 
-    m_dscView->CommitUndoActions();
+    m_dscView->CommitUndoActions(id);
 
     return true;
 }
