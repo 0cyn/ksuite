@@ -51,7 +51,7 @@ target_link_libraries(${PLUGIN_NAME} binaryninjaapi binaryninjaui Qt6::Core Qt6:
 target_compile_features(${PLUGIN_NAME} PRIVATE cxx_std_17 c_std_99)
 target_compile_definitions(${PLUGIN_NAME} PRIVATE
         DEV_MODE=${DEV_MODE})
-target_include_directories(${PLUGIN_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/Shared/cereal/include ${PROJECT_SOURCE_DIR}/API)
+target_include_directories(${PLUGIN_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/API)
 # Library targets linking against the Binary Ninja API need to be compiled with
 # position-independent code on Linux.
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
