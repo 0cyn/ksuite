@@ -68,7 +68,7 @@ void Notifications::OnContextOpen(UIContext* context)
         }
     }
     RegisterActions(context);
-
+    /*
     context->mainWindow()->setStyleSheet(context->mainWindow()->styleSheet() + "LinearView QMenu, SidebarWidget QMenu "
                                                                                "{ "
                                                                                "    padding: 0px; "
@@ -80,7 +80,7 @@ void Notifications::OnContextOpen(UIContext* context)
                                                                                "{"
                                                                                "    padding: 0px;"
                                                                                "}");
-
+*/
 
 }
 

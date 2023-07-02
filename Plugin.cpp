@@ -9,6 +9,7 @@
 #include "UI/Notifications.h"
 #include "UI/theme/Flattery.h"
 #include "UI/Callgraph/Callgraph.h"
+#include "Tooling/ExportSegmentAsFile/ExportSegment.h"
 
 void InitDSCViewType();
 
@@ -20,6 +21,9 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
 
     ShutUpAboutPAC::Register();
     InitDSCViewType();
+
+    ExportSegment::Register();
+    ExportSection::Register();
 
     return true;
 }
