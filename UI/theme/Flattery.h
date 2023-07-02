@@ -17,7 +17,7 @@ static std::string flatteryJson = R":3uwu(
 SidebarWidgetAndHeader, SidebarWidgetAndHeader QWidget, SidebarWidgetAndHeader QWidget QWidget, CrossReferenceTree, MainWindow QSplitter,
 StatusBarWidget, QPlainTextEdit, FilteredView, FilterEdit
 {
-background-color: #202020;
+background-color: #24273a;
 }
 
 MainWindow QSplitter {
@@ -25,11 +25,11 @@ MainWindow QSplitter {
 }
 
 MainWindow, AddressIndicator {
-background-color: #313131;
+background-color: #24273a;
 }
 
 ViewFrame QWidget {
-        background: #141414;
+        background: #181926;
 }
 
 ViewFrame > QWidget {
@@ -157,7 +157,7 @@ subcontrol-position: top;
 subcontrol-origin: margin;
 }
 ComponentTreeView {
-background-color: #202020;
+background-color: #24273a;
 border: solid 0px transparent;
 }
 FilterEdit, TypeFilterEdit {
@@ -165,14 +165,14 @@ border: solid 0px transparent;
 color: #8b8b8b;
 }
 LogView QLineEdit {
-        background-color: #202020;
+        background-color: #24273a;
         margin-top: 5px;
         margin-bottom: 5px;
         padding-left: 10px;
         border-radius: 10px;
 }
 LogView QComboBox {
-        background-color: #202020;
+        background-color: #24273a;
         border: solid 0px transparent;
 }
 /* Horrible hack to create a downward arrow without a border that actually works on macOS */
@@ -180,8 +180,8 @@ LogView QComboBox::drop-down:down-arrow{
 width: 0px;
 height: 0px;
 margin-top: 8px;
-border-left: 5px solid #202020;
-border-right: 5px solid #202020;
+border-left: 5px solid #24273a;
+border-right: 5px solid #24273a;
 border-top: 5px solid white;
 background-color:black;
 }
@@ -189,12 +189,12 @@ LogView QListView {
         background-color: #131313;
 }
 QTreeView QHeaderView::section {
-        background-color: #202020;
+        background-color: #24273a;
         border: solid 0px transparent;
         padding-left: 15px;
 }
 QTableView QHeaderView::section {
-        background-color: #202020;
+        background-color: #24273a;
         border: solid 0px transparent;
 }
 Pane QStackedWidget {
@@ -238,11 +238,11 @@ ScriptingConsole QLabel {
 }
 
 ScriptingConsoleOutput {
-background-color: #141414;
+background-color: #1e2030;
 }
 
 ScriptingConsoleEdit {
-background-color: #202020;
+background-color: #24273a;
 margin-left: 0px;
 border: 0;
 }
@@ -259,8 +259,8 @@ color: #c7c7c7;
 }
 
 SettingsView QWidget {
-        background-color: #202020;
-        border: solid 1px #202020;
+        background-color: #24273a;
+        border: solid 1px #24273a;
 }
 SettingsTreeView QWidget QWidget {
 background-color: #2a2a2a;
@@ -269,7 +269,7 @@ SettingsTreeView QWidget {
         background-color: #2a2a2a;
 }
 SettingsTreeView QTextEdit {
-        background-color: #141414;
+        background-color: #1e2030;
 }
 SettingsScopeBar QWidget {
         margin-left: 10px;
@@ -290,14 +290,14 @@ padding-bottom: 5px;
 }
 
 #remoteBrowser #textBrowser, #remoteBrowser #projectList, #remoteBrowser #remoteFileTree {
-background-color: #202020;
+background-color: #24273a;
 margin-top: 5px;
 padding-left: 5px;
 border: solid 0px transparent;
 }
 #remoteBrowser #textBrowser
 {
-background-color: #202020;
+background-color: #24273a;
 margin-top: 10px;
 padding-left: 4px;
 border: solid 0px transparent;
@@ -343,116 +343,95 @@ padding-top: 3px;
 
 /* <- this is here so I can edit the stylesheet as CSS in vscode with minimal red squiggles
 ",
-
 "colors": {
-  "transparent": "#313131",
-  "base": "#202020",
-  "lower": "#1a1a1a",
-  "lowest": "#151515",
-  "0": "#e0e0e0",
-  "text": "#c7c7c7",
-  "1": "#AEAEAE",
-  "2": "#8E8E8E",
-  "3": "#4B4B4B",
-  "4": "#3F3F3F",
-  "5": "#2B2B2B",
-  "6": "#0A0A0A",
-  "teal": "#A3E7FC",
-  "emerald": "#61ba97",
-  "richblue": "#508CC9",
-  "green": "#A2D9AF",
-  "red": "#DE8F97",
-  "blue": "#80C6E9",
-  "cyan": "#8EE6ED",
-  "lightcyan": "#B0DDE4",
-  "orange": "#EDBD81",
-  "yellow": "#EDDFB3",
-  "magenta": "#DAC4D1"
-},
+        "base": [36, 39, 58],
+        "text": [202, 211, 245],
+        "sky": [145, 215, 227],
+        "green": [166, 218, 149],
+        "yellow": [238, 212, 159],
+        "red": [237, 135, 150],
+        "rosewater": [244, 219, 214],
+        "lavender": [183, 189, 248],
+        "blue": [138, 173, 244],
+        "surface0": [54, 58, 79],
+        "surface2": [91, 96, 120],
+        "mantle": [30, 32, 48],
+        "crust": [24, 25, 38]
+    },
 
-"palette": {
-  "Window":          "transparent",
-  "WindowText":      "text",
-  "Base":            "transparent",
-  "AlternateBase":   "lowest",
-  "ToolTipBase":     "6",
-  "ToolTipText":     "text",
-  "Text":            "text",
-  "Button":          "base",
-  "ButtonText":      "1",
-  "BrightText":      "yellow",
-  "Link":            "blue",
-  "Highlight":       "blue",
-  "HighlightedText": "0",
-  "Light":           "transparent"
-},
+    "palette": {
+        "Window":          "base",
+        "WindowText":      "text",
+        "Base":            "base",
+        "AlternateBase":   "surface0",
+        "ToolTipBase":     "base",
+        "ToolTipText":     "surface2",
+        "Text":            "text",
+        "Button":          "base",
+        "ButtonText":      "surface2",
+        "BrightText":      "surface2",
+        "Link":            "rosewater",
+        "Highlight":       "sky",
+        "HighlightedText": "base",
+        "Light":           "surface2"
+    },
 
-"theme-colors": {
-  "addressColor":                         "green",
-  "modifiedColor":                        "red",
-  "insertedColor":                        "blue",
-  "notPresentColor":                      "3",
-  "selectionColor":                       "4",
-  "outlineColor":                         "4",
-  "backgroundHighlightDarkColor":         "5",
-  "backgroundHighlightLightColor":        "3",
-  "boldBackgroundHighlightDarkColor":     "1",
-  "boldBackgroundHighlightLightColor":    "2",
-  "alphanumericHighlightColor":           "blue",
-  "printableHighlightColor":              "lightcyan",
-  "graphBackgroundDarkColor":             "base",
-  "graphBackgroundLightColor":            "1",
-  "graphNodeDarkColor":                   "base",
-  "graphNodeLightColor":                  "base",
-  "graphNodeOutlineColor":                "4",
-  "trueBranchColor":                      "green",
-  "falseBranchColor":                     "red",
-  "unconditionalBranchColor":             "blue",
-  "altTrueBranchColor":                   "cyan",
-  "altFalseBranchColor":                  "orange",
-  "altUnconditionalBranchColor":          "text",
-  "registerColor":                        "yellow",
-  "numberColor":                          "green",
-  "codeSymbolColor":                      "blue",
-  "dataSymbolColor":                      "cyan",
-  "stackVariableColor":                   ["+", "green", "text"],
-  "importColor":                          "orange",
-  "instructionHighlightColor":            "5",
-  "tokenHighlightColor":                  "red",
-  "annotationColor":                      "magenta",
-  "opcodeColor":                          "4",
-  "linearDisassemblyNoteColor":           "base",
-  "linearDisassemblySeparatorColor":      "4",
-  "stringColor":                          ["+", "green", "emerald"],
-  "typeNameColor":                        "orange",
-  "fieldNameColor":                       "lightcyan",
-  "keywordColor":                         "yellow",
-  "uncertainColor":                       "2",
-  "scriptConsoleOutputColor":             "text",
-  "scriptConsoleWarningColor":            "yellow",
-  "scriptConsoleErrorColor":              "red",
-  "scriptConsoleEchoColor":               "1",
-  "greenStandardHighlightColor":          "green",
-  "blueStandardHighlightColor":           "blue",
-  "cyanStandardHighlightColor":           "cyan",
-  "redStandardHighlightColor":            "red",
-  "magentaStandardHighlightColor":        "magenta",
-  "yellowStandardHighlightColor":         "yellow",
-  "orangeStandardHighlightColor":         "orange",
-  "whiteStandardHighlightColor":          "text",
-  "blackStandardHighlightColor":          "base",
-
-  "sidebarHeaderBackgroundColor": "#5a151515",
-  "sidebarWidgetBackgroundColor": "#5a151515",
-  "sidebarActiveIconColor": "1",
-  "sidebarInactiveIconColor": "2",
-  "activePaneBackgroundColor": "#202020",
-  "inactivePaneBackgroundColor": "#202020",
-  "linearDisassemblyBlockColor": "#131313",
-  "linearDisassemblyFunctionHeaderColor": "#202020",
-  "graphBackgroundDarkColor": "#151515",
-  "graphBackgroundLightColor": "#111111"
-}
+    "theme-colors": {
+        "addressColor":                         "green",
+        "modifiedColor":                        "red",
+        "insertedColor":                        "sky",
+        "notPresentColor":                      "sky",
+        "selectionColor":                       "surface2",
+        "outlineColor":                         "green",
+        "backgroundHighlightDarkColor":         "base",
+        "backgroundHighlightLightColor":        "base",
+        "boldBackgroundHighlightDarkColor":     "blue",
+        "boldBackgroundHighlightLightColor":    "red",
+        "alphanumericHighlightColor":           "sky",
+        "printableHighlightColor":              "yellow",
+        "graphBackgroundDarkColor":             "crust",
+        "graphBackgroundLightColor":            "mantle",
+        "graphNodeDarkColor":                   "base",
+        "graphNodeLightColor":                  "base",
+        "graphNodeOutlineColor":                "surface2",
+        "trueBranchColor":                      "green",
+        "falseBranchColor":                     "red",
+        "unconditionalBranchColor":             "sky",
+        "altTrueBranchColor":                   "sky",
+        "altFalseBranchColor":                  "red",
+        "altUnconditionalBranchColor":          "sky",
+        "registerColor":                        "red",
+        "numberColor":                          "yellow",
+        "codeSymbolColor":                      "green",
+        "dataSymbolColor":                      "lavender",
+        "stackVariableColor":                   ["+", "text", "sky"],
+        "importColor":                          ["+", "text","green"],
+        "instructionHighlightColor":            ["~", "surface2", "base", 50],
+        "tokenHighlightColor":                  "lavender",
+        "annotationColor":                      "text",
+        "opcodeColor":                          "surface2",
+        "linearDisassemblyFunctionHeaderColor": "mantle",
+        "linearDisassemblyBlockColor":          "mantle",
+        "linearDisassemblyNoteColor":           "base",
+        "linearDisassemblySeparatorColor":      "surface2",
+        "stringColor":                          "yellow",
+        "typeNameColor":                        "sky",
+        "fieldNameColor":                       "blue",
+        "keywordColor":                         "green",
+        "uncertainColor":                       "sky",
+        "scriptConsoleOutputColor":             "text",
+        "scriptConsoleErrorColor":              "red",
+        "scriptConsoleEchoColor":               "green",
+        "blueStandardHighlightColor":           "blue",
+        "greenStandardHighlightColor":          "green",
+        "cyanStandardHighlightColor":           "sky",
+        "redStandardHighlightColor":            "red",
+        "magentaStandardHighlightColor":        "lavender",
+        "yellowStandardHighlightColor":         "yellow",
+        "orangeStandardHighlightColor":         ["+", "yellow", "red"],
+        "whiteStandardHighlightColor":          "text",
+        "blackStandardHighlightColor":          "base"
+    }
 }
 ):3uwu";
 

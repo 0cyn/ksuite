@@ -529,7 +529,9 @@ bool SharedCache::LoadSectionAtAddress(uint64_t address)
         m_dscView->AddUserSegment(seg.vmaddr, seg.vmsize, m_rawViewCursor, seg.vmsize, SegmentReadable | SegmentExecutable);
         m_dscView->WriteBuffer(seg.vmaddr, *buff);
         m_rawViewCursor = m_dscView->GetParentView()->GetEnd();
-    } else {
+    } else
+    {
+
     }
 
     SaveToDSCView();

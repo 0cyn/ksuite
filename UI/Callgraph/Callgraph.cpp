@@ -16,12 +16,9 @@ void showCallGraph(BinaryView* view, Function* func, const string& title, CallGr
     auto* callgraph = CallgraphGenerator::GetInstance(view);
     callgraph->SetCurrentTarget(func);
 
-    // My code can crank through this in a few minutes, but QT and the FlowGraph sorting + rendering will choke very
-    //          very very very hard trying to handle this. It is beyond impractical to try and display, there is no
-    //          workaround or optimization I can do to get around that.
     if (settings.generateFull && view->GetAnalysisFunctionList().size() > 100000)
     {
-        LogAlert("Generating the visual layout for %lu functions may take far more than a week to complete. "
+        LogAlert("Generating the visual layout for %lu functions may take an extremely long time to complete. "
                  "Please consider using scoped callgraphs instead. ", view->GetAnalysisFunctionList().size());
     }
 
