@@ -5,7 +5,7 @@
 #include <binaryninjaapi.h>
 #include "uitypes.h"
 #include "Plugin.h"
-#include "Workflows/ShutUpAboutPAC.h"
+#include "Workflows/DarwinKernel.h"
 #include "UI/Notifications.h"
 #include "UI/theme/Flattery.h"
 #include "UI/Callgraph/Callgraph.h"
@@ -19,7 +19,7 @@ BN_DECLARE_CORE_ABI_VERSION
 BN_DECLARE_UI_ABI_VERSION
 BINARYNINJAPLUGIN bool CorePluginInit() {
 
-    ShutUpAboutPAC::Register();
+    DarwinKernelWorkflow::Register();
     InitDSCViewType();
 
     ExportSegment::Register();

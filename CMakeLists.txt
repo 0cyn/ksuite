@@ -37,7 +37,7 @@ list(FILTER SRC_FILES EXCLUDE REGEX "Shared/.*")
 list(FILTER SRC_FILES EXCLUDE REGEX "cmake.*")
 list(FILTER SRC_FILES EXCLUDE REGEX "binja.*")
 
-set(PLUGIN_SOURCE ${SRC_FILES} UI/priv.h API/ksuiteapi.h Workflows/ObjectiveC.cpp Workflows/ObjectiveC.h Workflows/KSuiteMegaWorkflow.cpp Workflows/KSuiteMegaWorkflow.h API/sharedcache.cpp UI/SharedCache/dscpicker.cpp UI/SharedCache/dscpicker.h Views/SharedCache/VM.cpp Views/SharedCache/VM.h Views/SharedCache/DSCView.cpp Views/SharedCache/DSCView.h Views/SharedCache/LoadedImage.h Views/SharedCache/ObjC.cpp Views/SharedCache/ObjC.h libkbinja/MetadataSerializable.hpp UI/Callgraph/Callgraph.cpp UI/Callgraph/Callgraph.h)
+set(PLUGIN_SOURCE ${SRC_FILES} UI/priv.h API/ksuiteapi.h API/sharedcache.cpp)
 set("${CMAKE_C_FLAGS} -include${PROJECT_SOURCE_DIR}/Prefix.h")
 
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)

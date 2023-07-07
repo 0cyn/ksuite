@@ -2,8 +2,8 @@
 // Created by vr1s on 12/17/22.
 //
 
-#ifndef KSUITE_SHUTUPABOUTPAC_H
-#define KSUITE_SHUTUPABOUTPAC_H
+#ifndef KSUITE_DARWINKERNEL_H
+#define KSUITE_DARWINKERNEL_H
 
 #include <binaryninjaapi.h>
 
@@ -1288,18 +1288,19 @@ enum Register {
 };
 
 
-class ShutUpAboutPAC {
+class DarwinKernelWorkflow {
     static void ShutUpAboutAutDa(Ref<LowLevelILFunction>, size_t insnIndex);
 
 public:
     static void RewritePacInstructions(Ref<AnalysisContext> ctx);
     static void FixBrokenSIMD(Ref<AnalysisContext> ctx);
+    static void DontJump(Ref<AnalysisContext> ctx);
 
     static void Register();
 };
 
 
-#endif //KSUITE_SHUTUPABOUTPAC_H
+#endif //KSUITE_DARWINKERNEL_H
 
 
 

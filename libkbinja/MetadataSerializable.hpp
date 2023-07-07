@@ -11,7 +11,9 @@
 #define KSUITE_METADATASERIALIZABLE_HPP
 
 #define MSS(name) store(#name, name)
+#define MSS_CAST(name, type) store(#name, (type)name)
 #define MSL(name) name = load(#name, name)
+#define MSL_CAST(name, storedType, type) name = (type)load(#name, (storedType)name)
 
 using namespace BinaryNinja;
 
@@ -126,8 +128,76 @@ protected:
     {
         b = m_activeDeserContext->doc[name.c_str()].GetString();
     }
+    void Serialize(std::string& name, std::map<uint64_t, std::string> b)
+    {
+        S();
+        rapidjson::Value bArr(rapidjson::kArrayType);
+        for (auto i : b)
+        {
+            rapidjson::Value p(rapidjson::kArrayType);
+            p.PushBack(i.first, m_activeContext->allocator);
+            p.PushBack(i.second, m_activeContext->allocator);
+            bArr.PushBack(p, m_activeContext->allocator);
+        }
+        m_activeContext->doc.AddMember(r(name), bArr, m_activeContext->allocator);
+    }
+    void Deserialize(std::string& name, std::map<uint64_t, std::string>& b)
+    {
+        for (auto& i : m_activeDeserContext->doc[r(name)].GetArray())
+            b[i.GetArray()[0].GetUint64()] = i.GetArray()[1].GetString();
+    }
+    void Serialize(std::string& name, std::unordered_map<uint64_t, std::string> b)
+    {
+        S();
+        rapidjson::Value bArr(rapidjson::kArrayType);
+        for (auto i : b)
+        {
+            rapidjson::Value p(rapidjson::kArrayType);
+            p.PushBack(i.first, m_activeContext->allocator);
+            p.PushBack(i.second, m_activeContext->allocator);
+            bArr.PushBack(p, m_activeContext->allocator);
+        }
+        m_activeContext->doc.AddMember(r(name), bArr, m_activeContext->allocator);
+    }
+    void Serialize(std::string& name, std::unordered_map<std::string, std::string> b)
+    {
+        S();
+        rapidjson::Value bArr(rapidjson::kArrayType);
+        for (auto i : b)
+        {
+            rapidjson::Value p(rapidjson::kArrayType);
+            p.PushBack(i.first, m_activeContext->allocator);
+            p.PushBack(i.second, m_activeContext->allocator);
+            bArr.PushBack(p, m_activeContext->allocator);
+        }
+        m_activeContext->doc.AddMember(r(name), bArr, m_activeContext->allocator);
+    }
+    void Deserialize(std::string& name, std::unordered_map<uint64_t, std::string>& b)
+    {
+        for (auto& i : m_activeDeserContext->doc[r(name)].GetArray())
+            b[i.GetArray()[0].GetUint64()] = i.GetArray()[1].GetString();
+    }
+    void Deserialize(std::string& name, std::unordered_map<std::string, std::string>& b)
+    {
+        for (auto& i : m_activeDeserContext->doc[r(name)].GetArray())
+            b[i.GetArray()[0].GetString()] = i.GetArray()[1].GetString();
+    }
+    void Serialize(std::string &name, std::vector<std::string> b)
+    {
+        S();
+        rapidjson::Value bArr(rapidjson::kArrayType);
+        for (const auto& s : b)
+            bArr.PushBack(s, m_activeContext->allocator);
+        m_activeContext->doc.AddMember(r(name), bArr, m_activeContext->allocator);
+    }
+    void Deserialize(std::string& name, std::vector<std::string>& b)
+    {
+        for (auto& i : m_activeDeserContext->doc[r(name)].GetArray())
+            b.emplace_back(i.GetString());
+    }
     void Serialize(std::string& name, std::vector<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> b)
     {
+        S();
         rapidjson::Value bArr(rapidjson::kArrayType);
         for (auto i : b)
         {

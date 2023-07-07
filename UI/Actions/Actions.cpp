@@ -5,6 +5,7 @@
 #include "MultiShortcut.h"
 #include "../Callgraph/CallgraphGenerator.h"
 #include "../Callgraph/Callgraph.h"
+#include "Tooling/DarwinKernel/TypeSetter.h"
 
 void RegisterActions(UIContext *context)
 {
@@ -136,6 +137,25 @@ void RegisterActions(UIContext *context)
         ms->show();
     }));
 
+    context->globalActions()->bindAction("KSuite/KernelTypes/ExtMethod", UIAction([](const UIActionContext& ctx){
+        TypeSetter::CreateForContext(ctx);
+    }));
+
+
+    context->globalActions()->bindAction("KSuite/KernelTypes", UIAction([](const UIActionContext& ctx){
+        auto ms = new MultiShortcut(ctx, ctx.widget);
+
+        ms->setActionForItemIndex(0, new MultiShortcut::MultiShortcutItem(
+                "KSuite/KernelTypes/ExtMethod",
+                new QKeyCombination(Qt::Key_U),
+                "Ext Method"
+        ));
+
+        auto cPos = ctx.widget->cursor().pos();
+        ms->move(cPos);
+        ms->show();
+    }));
+
     context->globalActions()->bindAction("KSuite", UIAction([](const UIActionContext& ctx){
         auto ms = new MultiShortcut(ctx, ctx.widget);
 
@@ -143,7 +163,12 @@ void RegisterActions(UIContext *context)
                 "KSuite/Callgraph",
                 new QKeyCombination(Qt::Key_U),
                 "Callgraph"
-                ));
+        ));
+        ms->setActionForItemIndex(1, new MultiShortcut::MultiShortcutItem(
+                "KSuite/KernelTypes",
+                new QKeyCombination(Qt::Key_I),
+                "Kernel Types"
+        ));
 
         auto cPos = ctx.widget->cursor().pos();
         ms->move(cPos);
