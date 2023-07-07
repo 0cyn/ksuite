@@ -7,3 +7,6 @@
 [submodule "Shared/cereal"]
 	path = Shared/cereal
 	url = https://github.com/USCiLab/cereal.git
+[submodule "libkbinja"]
+	path = libkbinja
+	url = git@github.com:vr1s/libkbinja.git

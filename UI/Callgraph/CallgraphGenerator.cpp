@@ -4,7 +4,6 @@
 
 #include "CallgraphGenerator.h"
 #include "highlevelilinstruction.h"
-#include "BS_thread_pool.hpp"
 
 
 CallgraphGenerator* CallgraphGenerator::GetInstance(Ref<BinaryView> view)
@@ -233,18 +232,19 @@ Ref<FlowGraph> CallgraphGenerator::GenerateCallgraph(CallGraphSettings settings)
         validNodes = m_nodes;
     }
 
-    BS::thread_pool pool(std::thread::hardware_concurrency() - 1);
-    vector<std::future<std::pair<CallGraphNode*, FlowGraphNode*>>> futures;
+    vector<std::pair<CallGraphNode*, FlowGraphNode*>> futures;
+    futures.resize(validNodes.size());
     m_done = 0;
 
+    size_t index = 0;
     for (auto node : validNodes)
     {
-        std::future<std::pair<CallGraphNode*, FlowGraphNode*>> nodeFuture = pool.submit([=, &done=m_done](){
+        WorkerEnqueue([=, index=index, &done=m_done, &futures=futures](){
             auto graphNode = new FlowGraphNode(graph);
             if (!node->func->m_object)
             {
                 // Maybe this func has no hlil, most likely we are just hosed.
-                return std::pair<CallGraphNode*, FlowGraphNode*>(node, graphNode);
+                futures.at(index) = std::pair<CallGraphNode*, FlowGraphNode*>(node, graphNode);
             }
 
             vector<DisassemblyTextLine> lines;
@@ -275,10 +275,10 @@ Ref<FlowGraph> CallgraphGenerator::GenerateCallgraph(CallGraphSettings settings)
             }
             graphNode->SetLines(lines);
 
+            futures.at(index) = std::pair<CallGraphNode*, FlowGraphNode*>(node, graphNode);
             done++;
-            return std::pair<CallGraphNode*, FlowGraphNode*>(node, graphNode);
-        });
-        futures.push_back(std::move(nodeFuture));
+        }, "Callgraph Generator");
+        index++;
     }
 
     size_t last = 0;
@@ -293,7 +293,6 @@ Ref<FlowGraph> CallgraphGenerator::GenerateCallgraph(CallGraphSettings settings)
         }
     }
 
-    pool.wait_for_tasks();
     TrySetTaskTextAndProgress("Generating Nodes...", futures.size(), futures.size());
 
     if (!m_data->m_object)
@@ -303,7 +302,7 @@ Ref<FlowGraph> CallgraphGenerator::GenerateCallgraph(CallGraphSettings settings)
     }
     for (auto &future : futures)
     {
-        auto nodeAndGraphNode = future.get();
+        auto nodeAndGraphNode = future;
         auto node = nodeAndGraphNode.first;
         node->node = nodeAndGraphNode.second;
     }
