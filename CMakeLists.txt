@@ -26,7 +26,7 @@ set(CMAKE_REQUIRED_LINK_OPTIONS "-arch arm64")
 set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE INTERNAL "" FORCE)
 
 set(PLUGIN_SOURCE UI/priv.h API/ksuiteapi.h API/sharedcache.cpp Plugin.cpp Plugin.h
-        Tooling/DarwinKernel/TypeSetter.cpp Tooling/DarwinKernel/TypeSetter.h Tooling/DarwinKernel/Types.h
+        UI/DarwinKernel/TypeSetter.cpp UI/DarwinKernel/TypeSetter.h UI/DarwinKernel/Types.h
         Tooling/ExportSegmentAsFile/ExportSegment.h UI/Actions/Actions.cpp UI/Actions/Actions.h
         UI/Actions/MultiShortcut.cpp UI/Actions/MultiShortcut.h UI/Callgraph/Callgraph.cpp UI/Callgraph/Callgraph.h
         UI/Callgraph/CallgraphGenerator.cpp UI/Callgraph/CallgraphGenerator.h UI/DockableSidebar.cpp
@@ -56,13 +56,13 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     target_compile_options(${PLUGIN_NAME} PRIVATE "-fPIC")
 endif()
 
-list(APPEND fcl ${SRC_FILES})
+list(APPEND fcl ${PLUGIN_SOURCE})
 list(LENGTH fcl file_count)
 message(STATUS "")
 message(STATUS "BinaryNinja UI Plugin Config -=-=-=-======")
 message(STATUS "Project Name: ${PLUGIN_NAME}")
 message(STATUS "Tracked Source Files: ${file_count}")
-message(STATUS "${SRC_FILES}")
+# message(STATUS "${SRC_FILES}")
 message(STATUS "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-======")
 message(STATUS "")
 
