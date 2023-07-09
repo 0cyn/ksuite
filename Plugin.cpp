@@ -5,7 +5,7 @@
 #include <binaryninjaapi.h>
 #include "uitypes.h"
 #include "Plugin.h"
-#include "Workflows/DarwinKernel.h"
+#include "DarwinKernelUtils/Workflows/DarwinKernel.h"
 #include "UI/Notifications.h"
 #include "UI/theme/Flattery.h"
 #include "UI/Callgraph/Callgraph.h"
