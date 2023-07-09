@@ -10,3 +10,6 @@
 [submodule "libkbinja"]
 	path = libkbinja
 	url = git@github.com:vr1s/libkbinja.git
+[submodule "XNU"]
+	path = XNU
+	url = git@github.com:cxnder/binaryninja-xnu.git

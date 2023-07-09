@@ -5,7 +5,7 @@
 #include "MultiShortcut.h"
 #include "../Callgraph/CallgraphGenerator.h"
 #include "../Callgraph/Callgraph.h"
-#include "UI/DarwinKernel/TypeSetter.h"
+#include "XNU/UI/TypeSetter.h"
 
 void RegisterActions(UIContext *context)
 {
