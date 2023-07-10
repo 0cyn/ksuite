@@ -138,7 +138,18 @@ void RegisterActions(UIContext *context)
     }));
 
     context->globalActions()->bindAction("KSuite/KernelTypes/ExtMethod", UIAction([](const UIActionContext& ctx){
-        TypeSetter::CreateForContext(ctx);
+        auto type = TypeSetter::ClassTypeForContext(ctx);
+        if (type)
+        {
+            TypeSetter::TypeWithExternalMethod(ctx.binaryView, ctx.function, type);
+        }
+    }));
+    context->globalActions()->bindAction("KSuite/KernelTypes/ThisArg", UIAction([](const UIActionContext& ctx){
+        auto type = TypeSetter::ClassTypeForContext(ctx);
+        if (type)
+        {
+            TypeSetter::SetThisArgType(ctx.binaryView, ctx.function, type);
+        }
     }));
 
 
@@ -149,6 +160,11 @@ void RegisterActions(UIContext *context)
                 "KSuite/KernelTypes/ExtMethod",
                 new QKeyCombination(Qt::Key_U),
                 "Ext Method"
+        ));
+        ms->setActionForItemIndex(1, new MultiShortcut::MultiShortcutItem(
+                "KSuite/KernelTypes/ThisArg",
+                new QKeyCombination(Qt::Key_I),
+                "Set `this`"
         ));
 
         auto cPos = ctx.widget->cursor().pos();

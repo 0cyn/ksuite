@@ -23,7 +23,7 @@ if (UI_BUILD)
 endif()
 
 # BinaryNinja API Directory
-set(BINJA_API_DIR binja)
+set(BINJA_API_DIR binaryninja-api)
 
 # Non-user-serviceable parts below ---------------------------------------------
 

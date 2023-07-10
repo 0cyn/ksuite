@@ -237,7 +237,8 @@ public:
     {
         if (!IsWidgetFloating(type))
             return;
-        m_floatingWidgetContainers[type]->setFocus(Qt::OtherFocusReason);
+        m_floatingWidgetContainers[type]->setWindowState(m_floatingWidgetContainers[type]->windowState() & ~Qt::WindowMinimized);
+        //m_floatingWidgetContainers[type]->setAttribute(Qt::WA_ShowWithoutActivating);
         m_floatingWidgetContainers[type]->raise();
     }
     void ResetAllWidgets();

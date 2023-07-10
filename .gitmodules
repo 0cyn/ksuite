@@ -1,5 +1,5 @@
 [submodule "binja"]
-	path = binja
+	path = binaryninja-api
 	url = git@github.com:Vector35/binaryninja-api.git
 [submodule "Views/MachO"]
 	path = Views/MachO

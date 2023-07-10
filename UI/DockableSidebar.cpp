@@ -295,6 +295,7 @@ void ContextSidebarManager::ResetAllWidgets()
         auto widget = getExistingFloatingWidget(k);
         if (!widget)
             widget = getWidgetForType(k);
+        widget->setVisible(true);
         setExistingFloatingWidget(k, widget);
         v->layout()->addWidget(widget);
     }
@@ -316,12 +317,20 @@ void ContextSidebarManager::ResetAllWidgets()
 
 void ContextSidebarManager::WidgetStartedFloating(SidebarWidgetType* type, SidebarWidgetAndHeader* widget, QPoint pos)
 {
-    auto container = new QFrame();
+    auto container = new QFrame(uiContext()->mainWindow());
     container->setLayout(new QVBoxLayout());
     container->setGeometry(pos.x(), pos.y(), 350, uiContext()->mainWindow()->height());
     container->layout()->addWidget(widget);
     m_floatingWidgetContainers[type] = container;
     container->setAttribute(Qt::WA_DeleteOnClose,true);
+    container->setAttribute(Qt::WA_ShowWithoutActivating, true);
+
+    //container->setWindowFlag(Qt::Dialog, true);
+    container->setWindowFlag(Qt::WindowStaysOnTopHint, true);
+    container->setWindowFlag(Qt::WindowDoesNotAcceptFocus, true);
+    container->setWindowFlag(Qt::Tool, true);
+    container->setWindowModality(Qt::NonModal);
+    //container->setFocusPolicy(Qt::NoFocus);
     container->connect(widget, &SidebarWidgetAndHeader::destroyed, [this, type=type](){
         m_floatingWidgetContainers.erase(type);
     });
@@ -352,7 +361,7 @@ void DragAcceptingSplitter::dropEvent(QDropEvent *event)
         m_context->deleteExistingWidget(type);
 
     contents = m_context->getExistingFloatingWidget(type);
-    if (!contents)
+    if (!contents || !contents->widget())
     {
         contents = m_context->getWidgetForType(type);
         m_context->setExistingFloatingWidget(type, contents);
@@ -382,11 +391,10 @@ OrientablePushButton::OrientablePushButton(const QString &text, QWidget *parent)
         : QPushButton(text, parent)
 {
     setCheckable(true);
-    setStyleSheet(QString("QPushButton {border: 0px;} "
+    setStyleSheet(QString("QPushButton {padding: 10px; 10px;} "
                           "QPushButton::hover {"
                           "background-color: ") + getThemeColor(SidebarBackgroundColor).darker(140).name()
                   + ";}");
-    setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
     QPalette pal = palette();
     pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
     setOrientation(OrientablePushButton::VerticalTopToBottom);
@@ -398,12 +406,11 @@ OrientablePushButton::OrientablePushButton(const QIcon &icon, const QString &tex
 {
     setCheckable(true);
     setStyleSheet(
-            QString("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).name() +
+            QString("QPushButton {padding: 5px 3px;background-color: " + getThemeColor(SidebarBackgroundColor).name() +
                     ";} "
                     "QPushButton::hover {"
                     "background-color: ") + getThemeColor(SidebarBackgroundColor).darker(140).name()
             + ";}");
-    setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
     QPalette pal = palette();
     pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
     setOrientation((parent->m_sidebarPos == TopLeft || parent->m_sidebarPos == BottomLeft)
@@ -710,15 +717,27 @@ DockableSidebar::DockableSidebar(ContextSidebarManager *context, SidebarPos pos,
     setPalette(pal);
     setAutoFillBackground(true);
 
-    m_layout = new QVBoxLayout();
-    setContentsMargins(0, 0, 0, 0);
-    m_layout->setContentsMargins(0, 0, 0, 0);
+    m_layout = new QVBoxLayout(this);
     m_layout->addStretch();
-    setLayout(m_layout);
     m_placeholderButton = nullptr;
 
     m_context->RegisterSidebar(this);
     setAcceptDrops(true);
+
+    bool left = (m_sidebarPos == BottomLeft || m_sidebarPos == TopLeft);
+
+    if (left)
+    {
+        setContentsMargins(10, 10, 0, 10);
+        m_layout->setContentsMargins(10, 10, 0, 10);
+    }
+    else
+    {
+        setContentsMargins(0, 10, 10, 10);
+        m_layout->setContentsMargins(0, 10, 10, 10);
+
+    }
+    setFixedWidth(30);
 }
 
 void DockableSidebar::dragEnterEvent(QDragEnterEvent *event)
@@ -876,7 +895,7 @@ void DockableSidebar::HighlightActiveButton()
         for (auto button: m_buttons)
         {
             button->setChecked(false);
-            button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).name() + ";}");
+            button->setStyleSheet("QPushButton {padding: 5px 3px;border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).name() + ";}");
         }
 
     for (auto button: m_buttons)
@@ -886,11 +905,11 @@ void DockableSidebar::HighlightActiveButton()
         || m_context->IsWidgetFloating(button->m_type))
         {
             button->setChecked(true);
-            button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).darker(140).name() + ";}");
+            button->setStyleSheet("QPushButton {padding: 5px 3px;border: 0px;background-color: " + getThemeColor(SidebarBackgroundColor).darker(140).name() + ";}");
             continue;
         }
         button->setChecked(false);
-        button->setStyleSheet("QPushButton {border: 0px; background-color: " + getThemeColor(SidebarBackgroundColor).name() + ";}");
+        button->setStyleSheet("QPushButton {padding: 5px 3px;border: 0px;background-color: " + getThemeColor(SidebarBackgroundColor).name() + ";}");
     }
 }
 
