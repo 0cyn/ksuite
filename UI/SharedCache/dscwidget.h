@@ -11,9 +11,9 @@
 #include <QtCore/QSortFilterProxyModel>
 #include <QtWidgets/QTreeView>
 
-#include "filter.h"
-#include "sidebar.h"
-#include "uitypes.h"
+#include "binaryninja-api/ui/filter.h"
+#include "binaryninja-api/ui/sidebar.h"
+#include "binaryninja-api/ui/uitypes.h"
 #include <ksuiteapi.h>
 
 #include <mutex>

@@ -10,7 +10,7 @@
 #include <ui/viewframe.h>
 #include "DockableSidebar.h"
 #include "SharedCache/dscpicker.h"
-#include "linearview.h"
+#include "binaryninja-api/ui/linearview.h"
 #include "Actions/MultiShortcut.h"
 #include "Actions/Actions.h"
 

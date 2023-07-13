@@ -7,8 +7,8 @@
 
 
 #include <QtWidgets>
-#include "uicontext.h"
-#include "sidebar.h"
+#include "binaryninja-api/ui/uicontext.h"
+#include "binaryninja-api/ui/sidebar.h"
 
 class DockableSidebar;
 class OrientablePushButton;

@@ -7,11 +7,14 @@
 #include "XNU/Workflows/DarwinKernel.h"
 
 #ifdef UI_BUILD
-#include "uitypes.h"
+#include "binaryninja-api/ui/uitypes.h"
 #include "UI/Notifications.h"
 #include "UI/theme/Flattery.h"
 #include "UI/Callgraph/Callgraph.h"
 #include "Tooling/ExportSegmentAsFile/ExportSegment.h"
+#ifdef NOTEPAD_BUILD
+#include "Notepad/NotepadUI.h"
+#endif
 #endif
 
 void InitDSCViewType();
@@ -38,6 +41,10 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
 BINARYNINJAPLUGIN bool UIPluginInit() {
 
     Notifications::init();
+#ifdef NOTEPAD_BUILD
+    // TODO: consolidate these two classes
+    NotepadNotifications::init();
+#endif
     addJsonTheme(flatteryJson.c_str());
     refreshUserThemes();
     setActiveTheme("Flattery - Dark");

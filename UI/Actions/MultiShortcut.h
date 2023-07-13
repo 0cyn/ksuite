@@ -7,8 +7,8 @@
 
 
 #include <QWidget>
-#include "action.h"
-#include "uicontext.h"
+#include "binaryninja-api/ui/action.h"
+#include "binaryninja-api/ui/uicontext.h"
 
 class MultiShortcut : public QWidget {
 

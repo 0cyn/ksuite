@@ -14,15 +14,15 @@
 #include <QtWidgets/QStyledItemDelegate>
 #include <QTimer>
 
-#include "filter.h"
-#include "sidebar.h"
-#include "uitypes.h"
-#include "tabwidget.h"
-#include "datatypelist.h"
-#include "viewlist.h"
-#include "addressindicator.h"
-#include "logview.h"
-#include "scriptingconsole.h"
+#include "binaryninja-api/ui/filter.h"
+#include "binaryninja-api/ui/sidebar.h"
+#include "binaryninja-api/ui/uitypes.h"
+#include "binaryninja-api/ui/tabwidget.h"
+#include "binaryninja-api/ui/datatypelist.h"
+#include "binaryninja-api/ui/viewlist.h"
+#include "binaryninja-api/ui/addressindicator.h"
+#include "binaryninja-api/ui/logview.h"
+#include "binaryninja-api/ui/scriptingconsole.h"
 
 #include <mutex>
 

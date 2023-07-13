@@ -3,7 +3,7 @@
 //
 
 #include <binaryninjaapi.h>
-#include "uicontext.h"
+#include "binaryninja-api/ui/uicontext.h"
 
 #ifndef KSUITE_ACTIONS_H
 #define KSUITE_ACTIONS_H

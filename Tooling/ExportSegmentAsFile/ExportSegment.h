@@ -7,7 +7,7 @@
 
 #include "libkbinja/hex.h"
 #include <binaryninjaapi.h>
-#include "metadatachoicedialog.h"
+#include "binaryninja-api/ui/metadatachoicedialog.h"
 #include <fstream>
 
 using namespace BinaryNinja;

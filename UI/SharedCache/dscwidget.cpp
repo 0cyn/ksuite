@@ -4,9 +4,9 @@
 
 #include "dscwidget.h"
 
-#include "typeview.h"
-#include "viewframe.h"
-#include "progresstask.h"
+#include "binaryninja-api/ui/typeview.h"
+#include "binaryninja-api/ui/viewframe.h"
+#include "binaryninja-api/ui/progresstask.h"
 #include "../priv.h"
 
 #include <QtCore/QMimeData>

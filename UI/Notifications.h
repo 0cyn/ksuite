@@ -1,7 +1,7 @@
 //
 // Created by vr1s on 5/8/23.
 //
-#include "uicontext.h"
+#include "binaryninja-api/ui/uicontext.h"
 
 #ifndef KSUITE_NOTIFICATIONS_H
 #define KSUITE_NOTIFICATIONS_H

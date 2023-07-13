@@ -8,14 +8,14 @@
 #include "ui/sidebar.h"
 #include "SharedCache/dscwidget.h"
 #include "priv.h"
-#include "xreflist.h"
-#include "typeview.h"
-#include "variablelist.h"
-#include "stackview.h"
-#include "stringsview.h"
-#include "taglist.h"
-#include "minigraph.h"
-#include "memorymap.h"
+#include "binaryninja-api/ui/xreflist.h"
+#include "binaryninja-api/ui/typeview.h"
+#include "binaryninja-api/ui/variablelist.h"
+#include "binaryninja-api/ui/stackview.h"
+#include "binaryninja-api/ui/stringsview.h"
+#include "binaryninja-api/ui/taglist.h"
+#include "binaryninja-api/ui/minigraph.h"
+#include "binaryninja-api/ui/memorymap.h"
 
 #include <QPainter>
 #include <QStyleOptionButton>

@@ -13,3 +13,6 @@
 [submodule "XNU"]
 	path = XNU
 	url = git@github.com:cxnder/binaryninja-xnu.git
+[submodule "Notepad"]
+	path = Notepad
+	url = git@github.com:cxnder/binaryninja-notepad.git

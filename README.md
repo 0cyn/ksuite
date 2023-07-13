@@ -1,3 +1,7 @@
+<p align="center">
+<img src=".github/artwork.png" alt="Logo" width=2031> 
+</p>
+
 This is a modpack for BinaryNinja that implements some UI modifications and also adds support for a few file formats.
 
 It is not officially associated or affiliated with Vector35 in any capacity.
