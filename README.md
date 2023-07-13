@@ -38,7 +38,7 @@ muscle memory.
 
 ## Callgraph
 
-Multishortcut: `k` -> `u`  
+MultiShortcut: `k` -> `u`  
 Menu: `Plugins` -> `Callgraph`
 
 <p align="center">
@@ -75,12 +75,22 @@ built for modernity and legibility.
 
 ## Darwin Kernel Tooling 
 
+<p align="center">
+<img src=".github/eg_xnu_tools.png" alt="Theme Example" width=1920> 
+</p>
+
+<p align="center"><i>Before and after in action on IOHIDFamily</i></p>
+
 ### Type Helper
+
+MultiShortcut: `k` -> `i`  
 
 This is a set of UIActions (also included in the Multishortcut menu) that assist with the typing of 
 interesting methods in Kexts (particularly UserClient external methods for now).
 
 ### Darwin Kernel Workflow
+
+Workflow ID: `core.function.darwinKernel`
 
 This module workflow runs a few routines:
 * Removes PAC from LLIL upward
