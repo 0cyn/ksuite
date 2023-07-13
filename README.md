@@ -22,8 +22,6 @@ Drag your sidebar widgets where you need them, so you aren't constantly switchin
 Sidebars support all 4 positions (at the 4 corners of the screen,) and widgets
 can be moved around.
 
-When a sidebar item is drag-dropped anywhere but a sidebar, it'll open as a separate window and float on top :)
-
 ## MultiShortcut
 
 ![](.github/eg_multishortcut.gif)
