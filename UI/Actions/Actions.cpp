@@ -183,7 +183,7 @@ void RegisterActions(UIContext *context)
         ms->setActionForItemIndex(1, new MultiShortcut::MultiShortcutItem(
                 "KSuite/KernelTypes",
                 new QKeyCombination(Qt::Key_I),
-                "Kernel Types"
+                "XNU Tools"
         ));
 
         auto cPos = ctx.widget->cursor().pos();
