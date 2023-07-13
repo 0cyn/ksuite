@@ -4,7 +4,7 @@
 
 
 <p align="center">
-<a href="">Callgraph</a> | <a href="">Notepad</a> | <a href="">Dockable Sidebars</a> | <a href="">MultiShortcut</a> | <a href="">XNU Tools</a> | <a href="">Reimagined theme</a>
+<a href="https://github.com/cxnder/ksuite#callgraph">Callgraph</a> | <a href="https://github.com/cxnder/ksuite#notepad">Notepad</a> | <a href="https://github.com/cxnder/ksuite#dockable-sidebars">Dockable Sidebars</a> | <a href="https://github.com/cxnder/ksuite#multishortcut">MultiShortcut</a> | <a href="https://github.com/cxnder/ksuite#type-helper">XNU Tools</a> | <a href="https://github.com/cxnder/ksuite#re-imagined-theme">Reimagined theme</a>
 </p>
 
 This plugin is not officially associated or affiliated with Vector35 in any capacity.
@@ -51,8 +51,16 @@ Can generate a graph `N` calls into a func, out of a func, a variable amount in 
 Runs entirely backgrounded and uses exclusively BinaryNinja APIs for a seamless and snappy integration into the product.
 It's very fast :)
 
+## Notepad
 
-### Re-Imagined Theme
+Notepad plugin for BinaryNinja, supporting function/address specific notes
+combined into a global pad per-binary.
+
+<p align="center">
+<img src=".github/eg_notepad.png" alt="Notepad Example" width=1920> 
+</p>
+
+## Re-Imagined Theme
 
 <p align="center">
 <img src=".github/eg_theme_demo.png" alt="Theme Example" width=1920> 
