@@ -7,8 +7,9 @@
 <a href="https://github.com/cxnder/ksuite#callgraph">Callgraph</a> | <a href="https://github.com/cxnder/ksuite#notepad">Notepad</a> | <a href="https://github.com/cxnder/ksuite#dockable-sidebars">Dockable Sidebars</a> | <a href="https://github.com/cxnder/ksuite#multishortcut">MultiShortcut</a> | <a href="https://github.com/cxnder/ksuite#type-helper">XNU Tools</a> | <a href="https://github.com/cxnder/ksuite#re-imagined-theme">Reimagined theme</a>
 </p>
 
-This plugin is not officially associated or affiliated with Vector35 in any capacity.
+<p align="center">Not an official Vector 35 plugin. | This project is at ~75% completion. See the tracked issues for more info.</p>
 
+<p align="center"><a href="https://github.com/cxnder/ksuite#building">Building & Installing</a></p>
 
 ## Dockable Sidebars
 
@@ -86,3 +87,34 @@ This module workflow runs a few routines:
 * Consolidates certain SIMD code so it no longer takes up 16 HLIL lines per instruction
 * Properly transforms jumps to unknown locations to tailcalls
 
+## Building
+
+As this project isn't quite at a 1.0, (and due to some issues with Windows CI),
+CI hasn't been added quite yet. This plugin has some very awesome tooling already,
+however, and you can build it on your own machine w/ some effort
+
+1. Download the appropriate Qt build for your OS https://github.com/Vector35/qt-artifacts/releases/latest
+2. Extract it in your home folder; e.g. `cd ~; unzip qt6.4.3-macosx.zip`
+3. 
+```shell
+# Git Setup Phase
+git clone git@github.com:cxnder/ksuite.git
+cd ksuite
+git submodule update --init # Dont do recursive right now, there are some issues
+cd binaryninja-api
+git apply ../api.patch
+cd ..
+# Cmake phase
+mkdir -p build && cd build
+# For headless builds, omit -DUI_BUILD=ON argument entirely or set it to OFF
+cmake -DCMAKE_BUILD_TYPE=Release -DUI_BUILD=ON -DXNU_BUILD=ON -DNOTEPAD_BUILD=ON -DCALLGRAPH_BUILD=ON ../
+# Actually build it
+cmake --build . --target=install -j 8 
+```
+
+These instructions are liable to change at any time pre-release
+
+`-DUI_BUILD=ON` - Build things dependent on Qt  
+`-DXNU_BUILD=ON` - Build the XNU toolkit  
+`-DNOTEPAD_BUILD=ON` - Build the notepad tooling  
+`-DCALLGRAPH_BUILD=ON` - Build the callgraph tooling  
