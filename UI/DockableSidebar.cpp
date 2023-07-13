@@ -50,8 +50,20 @@ void ContextSidebarManager::SetupSidebars()
 {
     auto wholeMainViewSplitter = new DragAcceptingSplitter(this, nullptr);
     auto central = m_context->mainWindow()->centralWidget();
+    QVBoxLayout* oldMainLayout = qobject_cast<QVBoxLayout*>(central->layout());
+    QSplitter* oldMainSplitter;
+    for (auto child: central->children())
+    {
+        if (std::string(child->metaObject()->className()) == "QSplitter")
+        {
+            oldMainSplitter = qobject_cast<QSplitter*>(child);
+            break;
+        }
+    }
 
     auto leftSideFrame = new QFrame(central);
+    leftSideFrame->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
+    wholeMainViewSplitter->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
     QPalette pal = leftSideFrame->palette();
     pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
     leftSideFrame->setContentsMargins(0, 0, 0, 0);
@@ -85,23 +97,18 @@ void ContextSidebarManager::SetupSidebars()
     rightSidebarLayout->addWidget(m_sidebarForPos[BottomRight]);
 
     wholeMainViewSplitter->setContentsMargins(0, 0, 0, 0);
+    wholeMainViewSplitter->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     central->setContentsMargins(0, 0, 0, 0);
-    wholeMainViewSplitter->addWidget(m_leftContentView);
 
-    // sorry guys :3
-    for (auto child: central->children())
-    {
-        if (std::string(child->metaObject()->className()) == "QSplitter")
-        {
-            auto mainView = qobject_cast<QSplitter *>(child);
-            wholeMainViewSplitter->addWidget(mainView);
-            break;
-        }
-    }
-    auto frm = new QFrame(central);
-    m_wholeLayout = new QHBoxLayout(frm);
+    // layout meat
+    m_wholeLayout = qobject_cast<QHBoxLayout *>(oldMainLayout->itemAt(1)->layout());
     m_wholeLayout->setContentsMargins(0, 0, 0, 0);
-    central->layout()->addWidget(frm);
+    while (!m_wholeLayout->children().empty())
+        m_wholeLayout->removeItem(m_wholeLayout->itemAt(0));
+
+    wholeMainViewSplitter->addWidget(m_leftContentView);
+    wholeMainViewSplitter->addWidget(oldMainSplitter);
+    // qobject_cast<QVBoxLayout*>(central->layout())->addStretch(1);
     m_wholeLayout->addWidget(leftSideFrame);
     wholeMainViewSplitter->setParent(central);
     wholeMainViewSplitter->addWidget(m_rightContentView);
