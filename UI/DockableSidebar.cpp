@@ -788,6 +788,7 @@ void DockableSidebar::AddButton(OrientablePushButton *button)
         m_layout->addWidget(button);
     else
         m_layout->insertWidget(m_layout->count() - 1, button);
+    setFixedWidth(button->fontMetrics().height() * 2);
     button->m_sidebar = this;
     m_buttons.push_back(button);
     button->m_context = m_context;
