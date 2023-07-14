@@ -122,7 +122,9 @@ void ContextSidebarManager::SetupSidebars()
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new ComponentTreeSidebarWidgetType());
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new TypeViewSidebarWidgetType());
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new StringsViewSidebarWidgetType());
+#ifdef BUILD_SHAREDCACHE
     m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new DSCSidebarWidgetType());
+#endif
 
     for (auto type : m_sidebarForPos[TopLeft]->m_containedTypes)
         allTypes.push_back(type->name().toStdString());
@@ -600,6 +602,7 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
         widg = m_topContents->widget();
     else
         widg = m_bottomContents->widget();
+#ifdef THEME_BUILD
     if (widg)
     {
         widg->connect(widg->m_contextMenuManager, &ContextMenuManager::onOpen, m_topContents, [widg=widg](){
@@ -623,6 +626,7 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
             widg->m_contextMenuManager->m_menu->popup(pos);
         });
     }
+#endif
 
     repaint();
 }

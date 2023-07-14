@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <memory>
 #include <string>
+#include <cstring>
 
 
 void MMAP::Map() {

@@ -17,7 +17,9 @@
 #endif
 #endif
 
+#ifdef BUILD_SHAREDCACHE
 void InitDSCViewType();
+#endif
 
 extern "C" {
 
@@ -30,7 +32,9 @@ BN_DECLARE_UI_ABI_VERSION
 BINARYNINJAPLUGIN bool CorePluginInit() {
 
     DarwinKernelWorkflow::Register();
+#ifdef BUILD_SHAREDCACHE
     InitDSCViewType();
+#endif
 #ifdef UI_BUILD
     ExportSegment::Register();
     ExportSection::Register();
@@ -45,9 +49,11 @@ BINARYNINJAPLUGIN bool UIPluginInit() {
     // TODO: consolidate these two classes
     NotepadNotifications::init();
 #endif
+#ifdef THEME_BUILD
     addJsonTheme(flatteryJson.c_str());
     refreshUserThemes();
     setActiveTheme("Flattery - Dark");
+#endif
 
     CallgraphToolInit();
 

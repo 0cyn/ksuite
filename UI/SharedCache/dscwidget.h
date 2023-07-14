@@ -18,6 +18,8 @@
 
 #include <mutex>
 
+#ifdef BUILD_SHAREDCACHE
+
 class DSCContentsModel;
 
 class DSCFilterModel;
@@ -186,5 +188,7 @@ public:
 
     SidebarWidget *createWidget(ViewFrame *, BinaryViewRef) override;
 };
+
+#endif // BUILD_SHAREDCACHE
 
 #endif //SHAREDCACHE_DSCSIDEBARWIDGET_H

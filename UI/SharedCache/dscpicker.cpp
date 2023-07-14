@@ -9,6 +9,8 @@
 
 using namespace BinaryNinja;
 
+#ifdef BUILD_SHAREDCACHE
+
 std::string DisplayDSCPicker(UIContext* ctx, Ref<BinaryView> dscView)
 {
     // In this example, we display a list of all defined types to the user and allow them to pick one.
@@ -28,3 +30,5 @@ std::string DisplayDSCPicker(UIContext* ctx, Ref<BinaryView> dscView)
     else
         return {};
 }
+
+#endif

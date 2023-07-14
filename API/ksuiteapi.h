@@ -224,7 +224,7 @@ namespace KAPI {
             return m_obj;
         }
     };
-
+#ifdef BUILD_SHAREDCACHE
     class SharedCache {
         Ref<BinaryView> m_view;
     public:
@@ -236,4 +236,5 @@ namespace KAPI {
 
         uint64_t LoadedImageCount();
     };
+#endif
 }

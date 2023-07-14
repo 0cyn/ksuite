@@ -125,7 +125,12 @@ cmake --build . --target=install -j 8
 
 These instructions are liable to change at any time pre-release
 
+Pass these flags to override defaults:
+
+`-DTHEME_BUILD=OFF` - Pass this if you don't want the theme  
 `-DUI_BUILD=ON` - Build things dependent on Qt  
 `-DXNU_BUILD=ON` - Build the XNU toolkit  
 `-DNOTEPAD_BUILD=ON` - Build the notepad tooling  
 `-DCALLGRAPH_BUILD=ON` - Build the callgraph tooling
+
+Without passing any of these flags, this plugin is basically just a theme and a bunch of bootstrap code for plugins.

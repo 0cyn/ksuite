@@ -1532,6 +1532,8 @@ uint64_t BNDSCViewLoadedImageCount(BNBinaryView *view)
 DSCViewType *g_dscViewType;
 DSCRawViewType *g_dscRawViewType;
 
+#ifdef BUILD_SHAREDCACHE
+
 void InitDSCViewType() {
     static DSCRawViewType rawType;
     BinaryViewType::Register(&rawType);
@@ -1561,4 +1563,6 @@ void InitDSCViewType() {
         return true;
     });
 }
+
+#endif
 

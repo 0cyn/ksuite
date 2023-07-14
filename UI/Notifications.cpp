@@ -96,6 +96,7 @@ void Notifications::OnViewChange(UIContext *context, ViewFrame *frame, const QSt
     if (!frame)
         return;
 
+#ifdef THEME_BUILD
     auto widget = frame->getCurrentViewInterface()->widget();
     if (std::string(widget->metaObject()->className()) == "LinearView"){
         auto view = qobject_cast<LinearView*>(widget);
@@ -120,6 +121,8 @@ void Notifications::OnViewChange(UIContext *context, ViewFrame *frame, const QSt
             view->m_contextMenuManager->m_menu->popup(pos);
         });
     }
+#endif
+#ifdef BUILD_SHAREDCACHE
     auto view = frame->getCurrentBinaryView();
     if (view && view->GetTypeName() == "DSCView")
     {
@@ -136,5 +139,6 @@ void Notifications::OnViewChange(UIContext *context, ViewFrame *frame, const QSt
                 kache->LoadImageWithInstallName(initImage);
         }
     }
+#endif
 }
 

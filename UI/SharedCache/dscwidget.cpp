@@ -17,6 +17,8 @@
 
 namespace fs = std::filesystem;
 
+#ifdef BUILD_SHAREDCACHE
+
 /// Format an address as hexadecimal. Does not include leading '0x' prefix.
 QString formatAddress(uint64_t address) {
     return QString::number(address, 16).rightJustified(8, '0');
@@ -432,3 +434,5 @@ SidebarWidget *DSCSidebarWidgetType::createWidget(ViewFrame *frame, BinaryViewRe
 {
     return new DSCSidebarWidget(frame, data);
 }
+
+#endif

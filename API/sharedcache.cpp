@@ -5,6 +5,7 @@
 // Created by kat on 4/24/23.
 //
 
+#ifdef BUILD_SHAREDCACHE
 #include "ksuiteapi.h"
 #include "ksuitecore.h"
 
@@ -52,3 +53,4 @@ namespace KAPI {
         return BNDSCViewLoadedImageCount(m_view->m_object);
     }
 };
+#endif

@@ -15,34 +15,57 @@ set(CALLGRAPH_PLUGIN_UI_SOURCE UI/Callgraph/Callgraph.cpp UI/Callgraph/Callgraph
 set(NOTEPAD_PLUGIN_SOURCE Notepad/Notepad.cpp Notepad/Notepad.h )
 set(NOTEPAD_PLUGIN_UI_SOURCE Notepad/NotepadUI.h Notepad/NotepadUI.cpp )
 
-set(PLUGIN_SOURCE API/ksuiteapi.h API/sharedcache.cpp Plugin.cpp Plugin.h
-        Views/SharedCache/DSCView.cpp Views/SharedCache/DSCView.h Views/SharedCache/LoadedImage.h
+set(SHAREDCACHE_PLUGIN_SOURCE Views/SharedCache/DSCView.cpp Views/SharedCache/DSCView.h Views/SharedCache/LoadedImage.h
         Views/SharedCache/ObjC.cpp Views/SharedCache/ObjC.h Views/SharedCache/SharedCache.cpp
-        Views/SharedCache/SharedCache.h Views/SharedCache/VM.cpp Views/SharedCache/VM.h
-        )
+        Views/SharedCache/SharedCache.h Views/SharedCache/VM.cpp Views/SharedCache/VM.h API/sharedcache.cpp )
+set(SHAREDCACHE_PLUGIN_UI_SOURCE UI/SharedCache/dscpicker.cpp
+        UI/SharedCache/dscpicker.h UI/SharedCache/dscwidget.cpp UI/SharedCache/dscwidget.h )
+
+set(PLUGIN_SOURCE API/ksuiteapi.h Plugin.cpp Plugin.h)
 set(UI_PLUGIN_SOURCE UI/priv.h
         Tooling/ExportSegmentAsFile/ExportSegment.h UI/Actions/Actions.cpp UI/Actions/Actions.h
         UI/Actions/MultiShortcut.cpp UI/Actions/MultiShortcut.h UI/DockableSidebar.cpp
-        UI/DockableSidebar.h UI/Notifications.cpp UI/Notifications.h UI/SharedCache/dscpicker.cpp
-        UI/SharedCache/dscpicker.h UI/SharedCache/dscwidget.cpp UI/SharedCache/dscwidget.h UI/priv.h UI/shared.h
+        UI/DockableSidebar.h UI/Notifications.cpp UI/Notifications.h UI/priv.h UI/shared.h
         UI/theme/Flattery.h)
+
+if(NOT DEFINED THEME_BUILD)
+    set(THEME_BUILD ON)
+endif()
+
+if (THEME_BUILD)
+    set(PLUGIN_CDEFS ${PLUGIN_CDEFS} THEME_BUILD=1)
+endif()
 
 if (XNU_BUILD)
     set(PLUGIN_SOURCE ${PLUGIN_SOURCE} ${XNU_PLUGIN_SOURCE})
     set(UI_PLUGIN_SOURCE ${UI_PLUGIN_SOURCE} ${XNU_PLUGIN_UI_SOURCE})
     set(PLUGIN_CDEFS ${PLUGIN_CDEFS} XNU_BUILD=1)
+else()
+    set(XNU_BUILD OFF)
 endif()
 
 if (NOTEPAD_BUILD)
     set(PLUGIN_SOURCE ${PLUGIN_SOURCE} ${NOTEPAD_PLUGIN_SOURCE})
     set(UI_PLUGIN_SOURCE ${UI_PLUGIN_SOURCE} ${NOTEPAD_PLUGIN_UI_SOURCE})
     set(PLUGIN_CDEFS ${PLUGIN_CDEFS} NOTEPAD_BUILD=1)
+else()
+    set(NOTEPAD_BUILD OFF)
 endif()
 
 if (CALLGRAPH_BUILD)
     set(PLUGIN_SOURCE ${PLUGIN_SOURCE} ${CALLGRAPH_PLUGIN_SOURCE})
     set(UI_PLUGIN_SOURCE ${UI_PLUGIN_SOURCE} ${CALLGRAPH_PLUGIN_UI_SOURCE})
     set(PLUGIN_CDEFS ${PLUGIN_CDEFS} CALLGRAPH_BUILD=1)
+else()
+    set(CALLGRAPH_BUILD OFF)
+endif()
+
+if (SHAREDCACHE_BUILD)
+    set(PLUGIN_SOURCE ${PLUGIN_SOURCE} ${SHAREDCACHE_PLUGIN_SOURCE})
+    set(UI_PLUGIN_SOURCE ${UI_PLUGIN_SOURCE} ${SHAREDCACHE_PLUGIN_UI_SOURCE})
+    set(PLUGIN_CDEFS ${PLUGIN_CDEFS} SHAREDCACHE_BUILD=1)
+else()
+    set(SHAREDCACHE_BUILD OFF)
 endif()
 
 if (UI_BUILD)
@@ -127,6 +150,10 @@ endif()
 
 message(STATUS "Project Name: ${PLUGIN_NAME}")
 message(STATUS "Tracked Source Files: ${file_count}")
+message(STATUS "XNU Helpers: ${XNU_BUILD}")
+message(STATUS "Callgraph: ${CALLGRAPH_BUILD}")
+message(STATUS "Notepad: ${NOTEPAD_BUILD}")
+message(STATUS "Theme: ${THEME_BUILD}")
 message(STATUS "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-======")
 
 message(STATUS "")
