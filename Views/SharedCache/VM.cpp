@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <memory>
-
+#include <string>
 
 
 void MMAP::Map() {

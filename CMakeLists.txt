@@ -47,7 +47,13 @@ endif()
 
 if (UI_BUILD)
     # You may need to replace this with your path
-    set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt/6.4.3/clang_64/lib/cmake")
+    if(APPLE)
+        set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt/6.4.3/clang_64/lib/cmake")
+    elseif(MSVC) # doesnt work on gh runners
+        set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt/6.4.3/msvc2022_64/lib/cmake")
+    else()
+        set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt/6.4.3/gcc_64/lib/cmake")
+    endif()
 endif()
 
 # BinaryNinja API Directory
