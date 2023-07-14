@@ -111,8 +111,18 @@ however, and you can build it on your own machine w/ some effort
 # Git Setup Phase
 git clone git@github.com:cxnder/ksuite.git
 cd ksuite
-git submodule update --init # Dont do recursive right now, there are some issues
+git submodule update --init --recursive
 cd binaryninja-api
+git fetch --tags
+```
+4. CRITICAL:  
+from the binaryninja-api dir:  
+If building for current dev: `git checkout dev`  
+If building for latest stable: `git checkout --force v3.4.4271-stable`   
+  
+5. 
+```shell
+# Still within binaryninja-api dir
 git apply ../api.patch
 cd ..
 # Cmake phase
