@@ -5,8 +5,8 @@ set(PLUGIN_NAME ksuite)
 
 set(PLUGIN_CDEFS KSUITE=1)
 
-set(XNU_PLUGIN_SOURCE XNU/Workflows/DarwinKernel.cpp XNU/Workflows/DarwinKernel.h )
-set(XNU_PLUGIN_UI_SOURCE XNU/UI/TypeSetter.cpp XNU/UI/TypeSetter.h XNU/UI/Types.h )
+set(XNU_PLUGIN_SOURCE XNU/Workflows/DarwinKernel.cpp XNU/Workflows/DarwinKernel.h XNU/CPP/CPPTypeHelper.cpp XNU/CPP/CPPTypeHelper.h)
+set(XNU_PLUGIN_UI_SOURCE XNU/UI/TypeSetter.cpp XNU/UI/TypeSetter.h XNU/CPP/Types.h)
 
 set(CALLGRAPH_PLUGIN_SOURCE )
 set(CALLGRAPH_PLUGIN_UI_SOURCE UI/Callgraph/Callgraph.cpp UI/Callgraph/Callgraph.h

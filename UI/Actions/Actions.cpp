@@ -6,11 +6,26 @@
 #include "../Callgraph/CallgraphGenerator.h"
 #include "../Callgraph/Callgraph.h"
 #include "XNU/UI/TypeSetter.h"
+#include "XNU/CPP/CPPTypeHelper.h"
 
 void RegisterActions(UIContext *context)
 {
     UIAction::registerAction("KSuite/Callgraph");
     UIAction::registerAction("KSuite", QKeySequence(Qt::Key_K));
+    UIAction::registerAction("KSuite/Callgraph/Upward/Names");
+    UIAction::registerAction("KSuite/Callgraph/Upward/With Code");
+    UIAction::registerAction("KSuite/Callgraph/Downward/Names");
+    UIAction::registerAction("KSuite/Callgraph/Downward/With Code");
+    UIAction::registerAction("KSuite/Callgraph/Bidirectional/Names");
+    UIAction::registerAction("KSuite/Callgraph/Bidirectional/With Code");
+    UIAction::registerAction("KSuite/Callgraph/Upward");
+    UIAction::registerAction("KSuite/Callgraph/Downward");
+    UIAction::registerAction("KSuite/Callgraph/Bidirectional");
+    UIAction::registerAction("KSuite/Callgraph");
+    UIAction::registerAction("KSuite/KernelTypes/ExtMethod");
+    UIAction::registerAction("KSuite/KernelTypes/ThisArg");
+    UIAction::registerAction("KSuite/KernelTypes/RunAnalysis");
+    UIAction::registerAction("KSuite/KernelTypes");
 
     context->globalActions()->bindAction("KSuite/Callgraph/Upward/Names", UIAction([](const UIActionContext& ctx){
         CallGraphSettings settings;
@@ -138,17 +153,43 @@ void RegisterActions(UIContext *context)
     }));
 
     context->globalActions()->bindAction("KSuite/KernelTypes/ExtMethod", UIAction([](const UIActionContext& ctx){
-        auto type = TypeSetter::ClassTypeForContext(ctx);
-        if (type)
+        auto helper = new CPPTypeHelper(ctx.binaryView);
+        if (auto type = helper->GetClassTypeForFunction(ctx.function))
         {
-            TypeSetter::TypeWithExternalMethod(ctx.binaryView, ctx.function, type);
+            helper->SetExternalMethodType(ctx.function, type);
         }
     }));
     context->globalActions()->bindAction("KSuite/KernelTypes/ThisArg", UIAction([](const UIActionContext& ctx){
-        auto type = TypeSetter::ClassTypeForContext(ctx);
-        if (type)
+        auto helper = new CPPTypeHelper(ctx.binaryView);
+        if (auto type = helper->GetClassTypeForFunction(ctx.function))
         {
-            TypeSetter::SetThisArgType(ctx.binaryView, ctx.function, type);
+            helper->SetThisArgType(ctx.function, type);
+        }
+    }));
+    context->globalActions()->bindAction("KSuite/KernelTypes/RunAnalysis", UIAction([](const UIActionContext& ctx){
+        if (ctx.binaryView)
+        {
+            auto helper = new CPPTypeHelper(ctx.binaryView);
+            auto classes = helper->FetchClasses();
+            for (auto& c : classes)
+            {
+                /*
+                BNLogInfo("Class: %s", c.name.c_str());
+                for (auto& s : c.superclasses)
+                    BNLogInfo("  Superclass: %s", s.c_str());
+                for (auto& it : c.vtable)
+                {
+                    std::string name;
+                    if (auto sym = ctx.binaryView->GetSymbolByAddress(it.second))
+                        name = sym->GetShortName();
+                    if (name.empty())
+                        if (auto sym = ctx.binaryView->GetSymbolByAddress(c.vtableStart + 0x10 + it.first))
+                            name = sym->GetShortName();
+                    BNLogInfo("  0x%llx = %s", it.first, name.c_str());
+                }
+                 */
+                helper->CreateTypeForClass(c);
+            }
         }
     }));
 
@@ -165,6 +206,11 @@ void RegisterActions(UIContext *context)
                 "KSuite/KernelTypes/ThisArg",
                 new QKeyCombination(Qt::Key_I),
                 "Set `this`"
+        ));
+        ms->setActionForItemIndex(2, new MultiShortcut::MultiShortcutItem(
+                "KSuite/KernelTypes/RunAnalysis",
+                new QKeyCombination(Qt::Key_O),
+                "Analyze"
         ));
 
         auto cPos = ctx.widget->cursor().pos();
@@ -185,6 +231,7 @@ void RegisterActions(UIContext *context)
                 new QKeyCombination(Qt::Key_I),
                 "XNU Tools"
         ));
+
 
         auto cPos = ctx.widget->cursor().pos();
         ms->move(cPos);
