@@ -535,6 +535,7 @@ DockableSidebarContentView::DockableSidebarContentView(ContextSidebarManager *si
     m_splitter->setContentsMargins(0, 0, 0, 0);
     setContentsMargins(0, 0, 0, 0);
     QGridLayout *layout = new QGridLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(m_splitter, 0, 0);
     SizeCheck();
 }
