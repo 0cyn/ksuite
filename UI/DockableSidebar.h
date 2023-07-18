@@ -15,6 +15,92 @@ class OrientablePushButton;
 class ContextSidebarManager;
 class DockableSidebarContentView;
 
+enum SidebarPos {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    SidebarPosCount // KEEP AT END!
+};
+
+class ContextSidebarManager {
+public:
+    QSettings* m_settings;
+private:
+
+    std::vector<DockableSidebar*> m_activeSidebars;
+    QHBoxLayout* m_wholeLayout;
+    UIContext* m_context;
+    QWidget* m_oldSidebar;
+    SidebarWidgetContainer* m_oldContainer;
+    QLayout* m_targetLayout;
+    std::unordered_map<std::string, SidebarWidgetType*> m_registeredTypes;
+    std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_widgets;
+    std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_floatingWidgets;
+    DockableSidebarContentView* m_leftContentView;
+    DockableSidebarContentView* m_rightContentView;
+    OrientablePushButton* m_currentDragTarget;
+    std::unordered_map<SidebarPos, DockableSidebar*> m_sidebarForPos;
+    std::map<SidebarWidgetType*, QWidget*> m_floatingWidgetContainers;
+public:
+    ContextSidebarManager(SidebarWidgetContainer* oldContainer, QWidget* oldSidebar, QLayout* oldLayout, UIContext* context)
+            : m_oldContainer(oldContainer), m_oldSidebar(oldSidebar), m_targetLayout(oldLayout), m_context(context)
+    {
+        m_settings = new QSettings("ksuite");
+    }
+
+    SidebarWidgetType* TypeForName(std::string name)
+    {
+        if (const auto& it = m_registeredTypes.find(name); it != m_registeredTypes.end())
+            return it->second;
+        return nullptr;
+    }
+
+    std::vector<std::string> UnassignedWidgetTypes();
+    void DeactivateType(SidebarWidgetType* type);
+    DockableSidebar* SidebarForGlobalPos(QPointF);
+    void SetupSidebars();
+    void UpdateTypes();
+
+    SidebarWidgetAndHeader* getWidgetForType(SidebarWidgetType* type);
+    SidebarWidgetAndHeader* getExistingWidget(SidebarWidgetType* type);
+    SidebarWidgetAndHeader* getExistingFloatingWidget(SidebarWidgetType* type);
+    void deleteExistingWidget(SidebarWidgetType* type);
+    void deleteExistingFloatingWidget(SidebarWidgetType* type);
+    void setExistingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents);
+    void setExistingFloatingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents);
+
+    UIContext* uiContext() { return m_context; }
+    void RegisterSidebar(DockableSidebar* sidebar)
+    {
+        m_activeSidebars.push_back(sidebar);
+    }
+    OrientablePushButton* dragTarget() { return m_currentDragTarget; };
+    void DragStartedWithTarget(OrientablePushButton* target)
+    {
+        m_currentDragTarget = target;
+    }
+    void DragEnded()
+    {
+        m_currentDragTarget = nullptr;
+    };
+    void WidgetStartedFloating(SidebarWidgetType* type, SidebarWidgetAndHeader* widget, QPoint pos);
+    bool IsWidgetFloating(SidebarWidgetType* type)
+    {
+        return m_floatingWidgetContainers.count(type) > 0;
+    }
+    void ActivateFloatingWidget(SidebarWidgetType* type)
+    {
+        if (!IsWidgetFloating(type))
+            return;
+        m_floatingWidgetContainers[type]->setWindowState(m_floatingWidgetContainers[type]->windowState() & ~Qt::WindowMinimized);
+        //m_floatingWidgetContainers[type]->setAttribute(Qt::WA_ShowWithoutActivating);
+        m_floatingWidgetContainers[type]->raise();
+    }
+    void ResetAllWidgets();
+};
+
+
 class OrientablePushButton : public QPushButton
 {
     Q_OBJECT
@@ -65,14 +151,6 @@ public:
     void paintEvent(QPaintEvent *event);
 };
 
-enum SidebarPos {
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-    SidebarPosCount // KEEP AT END!
-};
-
 class DragAcceptingSplitter : public QSplitter
 {
     ContextSidebarManager* m_context;
@@ -83,6 +161,9 @@ public:
     void dropEvent(QDropEvent *event) override;
 };
 
+
+QString sidebarPosToString(SidebarPos pos);
+
 class DockableSidebar : public QWidget {
 
     Q_OBJECT
@@ -90,7 +171,6 @@ class DockableSidebar : public QWidget {
     friend OrientablePushButton;
     friend ContextSidebarManager;
 
-    std::vector<SidebarWidgetType*> m_containedTypes;
     DockableSidebarContentView* m_contentView;
 
     ContextSidebarManager* m_context;
@@ -106,23 +186,21 @@ public:
     void AddButton(OrientablePushButton* button);
     void AddType(SidebarWidgetType* type, uint8_t idx = UINT8_MAX)
     {
-        if (idx > m_containedTypes.size())
-            m_containedTypes.push_back(type);
+        QStringList typeNames = m_context->m_settings->value("SidebarTypes-" + sidebarPosToString(m_sidebarPos)).toStringList();
+        if (idx > typeNames.size())
+            typeNames.push_back(type->name());
         else
-            m_containedTypes.insert(m_containedTypes.begin()+idx, type);
+            typeNames.insert(typeNames.begin()+idx, type->name());
+        typeNames.removeDuplicates();
+        m_context->m_settings->setValue("SidebarTypes-" + sidebarPosToString(m_sidebarPos), typeNames);
     }
     void RemoveType(SidebarWidgetType *type)
     {
-        m_containedTypes.erase(
-                std::remove(m_containedTypes.begin(), m_containedTypes.end(), type),
-                m_containedTypes.end());
+        QStringList typeNames = m_context->m_settings->value("SidebarTypes-" + sidebarPosToString(m_sidebarPos)).toStringList();
+        typeNames.removeAll(type->name());
+        m_context->m_settings->setValue("SidebarTypes-" + sidebarPosToString(m_sidebarPos), typeNames);
     }
-    void ClearTypes()
-    {
-        for (auto button : m_buttons)
-            m_layout->removeWidget(button);
-        m_containedTypes.clear();
-    }
+    std::vector<SidebarWidgetType*> GetTypes(bool includeUnassigned = true);
     void UpdateForTypes();
 
     void dropEvent(QDropEvent *event) override;
@@ -180,68 +258,6 @@ public:
     void DeactivateWidgetType(SidebarWidgetType* type);
     QSize sizeHint() const override;
     void SizeCheck();
-};
-
-
-class ContextSidebarManager {
-    std::vector<DockableSidebar*> m_activeSidebars;
-    QHBoxLayout* m_wholeLayout;
-    UIContext* m_context;
-    QWidget* m_oldSidebar;
-    SidebarWidgetContainer* m_oldContainer;
-    QLayout* m_targetLayout;
-    std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_widgets;
-    std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_floatingWidgets;
-    DockableSidebarContentView* m_leftContentView;
-    DockableSidebarContentView* m_rightContentView;
-    OrientablePushButton* m_currentDragTarget;
-    std::unordered_map<SidebarPos, DockableSidebar*> m_sidebarForPos;
-    std::map<SidebarWidgetType*, QWidget*> m_floatingWidgetContainers;
-public:
-    ContextSidebarManager(SidebarWidgetContainer* oldContainer, QWidget* oldSidebar, QLayout* oldLayout, UIContext* context)
-        : m_oldContainer(oldContainer), m_oldSidebar(oldSidebar), m_targetLayout(oldLayout), m_context(context)
-    {}
-    void DeactivateType(SidebarWidgetType* type);
-    DockableSidebar* SidebarForGlobalPos(QPointF);
-    void SetupSidebars();
-    void UpdateTypes();
-
-    SidebarWidgetAndHeader* getWidgetForType(SidebarWidgetType* type);
-    SidebarWidgetAndHeader* getExistingWidget(SidebarWidgetType* type);
-    SidebarWidgetAndHeader* getExistingFloatingWidget(SidebarWidgetType* type);
-    void deleteExistingWidget(SidebarWidgetType* type);
-    void deleteExistingFloatingWidget(SidebarWidgetType* type);
-    void setExistingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents);
-    void setExistingFloatingWidget(SidebarWidgetType* type, SidebarWidgetAndHeader* contents);
-
-    UIContext* uiContext() { return m_context; }
-    void RegisterSidebar(DockableSidebar* sidebar)
-    {
-        m_activeSidebars.push_back(sidebar);
-    }
-    OrientablePushButton* dragTarget() { return m_currentDragTarget; };
-    void DragStartedWithTarget(OrientablePushButton* target)
-    {
-        m_currentDragTarget = target;
-    }
-    void DragEnded()
-    {
-        m_currentDragTarget = nullptr;
-    };
-    void WidgetStartedFloating(SidebarWidgetType* type, SidebarWidgetAndHeader* widget, QPoint pos);
-    bool IsWidgetFloating(SidebarWidgetType* type)
-    {
-        return m_floatingWidgetContainers.count(type) > 0;
-    }
-    void ActivateFloatingWidget(SidebarWidgetType* type)
-    {
-        if (!IsWidgetFloating(type))
-            return;
-        m_floatingWidgetContainers[type]->setWindowState(m_floatingWidgetContainers[type]->windowState() & ~Qt::WindowMinimized);
-        //m_floatingWidgetContainers[type]->setAttribute(Qt::WA_ShowWithoutActivating);
-        m_floatingWidgetContainers[type]->raise();
-    }
-    void ResetAllWidgets();
 };
 
 

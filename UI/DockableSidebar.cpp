@@ -30,6 +30,23 @@ double dist(QPointF p, QPointF q)
     return dist;
 }
 
+std::vector<std::string> ContextSidebarManager::UnassignedWidgetTypes()
+{
+    std::vector<std::string> allTypes;
+    for (const auto& [k, _] : m_registeredTypes)
+    {
+        allTypes.push_back(k);
+    }
+    for (const auto& [_, bar] : m_sidebarForPos)
+    {
+        for (const auto& type : bar->GetTypes(false))
+        {
+            allTypes.erase(std::remove(allTypes.begin(), allTypes.end(), type->name().toStdString()));
+        }
+    }
+    return allTypes;
+}
+
 DockableSidebar *ContextSidebarManager::SidebarForGlobalPos(QPointF pos)
 {
     auto nearest = m_activeSidebars.at(0);
@@ -67,6 +84,15 @@ void ContextSidebarManager::SetupSidebars()
     QPalette pal = leftSideFrame->palette();
     pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
     leftSideFrame->setContentsMargins(0, 0, 0, 0);
+
+    for (auto type : qobject_cast<Sidebar*>(m_oldSidebar)->contentTypes())
+    {
+        m_registeredTypes[type->name().toStdString()] = type;
+    }
+    for (auto type : qobject_cast<Sidebar*>(m_oldSidebar)->referenceTypes())
+    {
+        m_registeredTypes[type->name().toStdString()] = type;
+    }
 
     m_leftContentView = new DockableSidebarContentView(this, m_context, wholeMainViewSplitter, true, central);
     m_leftContentView->setObjectName("leftContentView");
@@ -117,47 +143,6 @@ void ContextSidebarManager::SetupSidebars()
 
     m_oldSidebar->setVisible(false);
 
-    std::vector<std::string> allTypes;
-
-    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new ComponentTreeSidebarWidgetType());
-    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new TypeViewSidebarWidgetType());
-    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new StringsViewSidebarWidgetType());
-#ifdef BUILD_SHAREDCACHE
-    m_sidebarForPos[TopLeft]->m_containedTypes.push_back(new DSCSidebarWidgetType());
-#endif
-
-    for (auto type : m_sidebarForPos[TopLeft]->m_containedTypes)
-        allTypes.push_back(type->name().toStdString());
-
-    m_sidebarForPos[TopRight]->m_containedTypes.push_back(new VariableListSidebarWidgetType());
-    m_sidebarForPos[TopRight]->m_containedTypes.push_back(new StackViewSidebarWidgetType());
-    m_sidebarForPos[TopRight]->m_containedTypes.push_back(new MemoryMapSidebarWidgetType());
-
-    for (auto type : m_sidebarForPos[TopRight]->m_containedTypes)
-        allTypes.push_back(type->name().toStdString());
-
-    m_sidebarForPos[BottomLeft]->m_containedTypes.push_back(new CrossReferenceSidebarWidgetType());
-    m_sidebarForPos[BottomLeft]->m_containedTypes.push_back(new MiniGraphSidebarWidgetType());
-
-    for (auto type : m_sidebarForPos[BottomLeft]->m_containedTypes)
-        allTypes.push_back(type->name().toStdString());
-
-    m_sidebarForPos[BottomRight]->m_containedTypes.push_back(new TagListSidebarWidgetType());
-
-    for (auto type : m_sidebarForPos[BottomRight]->m_containedTypes)
-        allTypes.push_back(type->name().toStdString());
-
-    for (auto type : qobject_cast<Sidebar*>(m_oldSidebar)->contentTypes())
-    {
-        if (std::find(allTypes.begin(), allTypes.end(), type->name().toStdString()) == allTypes.end())
-        {
-            m_sidebarForPos[TopLeft]->m_containedTypes.push_back(type);
-            allTypes.push_back(type->name().toStdString());
-        }
-    }
-
-    allTypes.clear();
-
     UpdateTypes();
 }
 
@@ -171,9 +156,6 @@ void ContextSidebarManager::UpdateTypes()
             auto sidebar = it->second;
             auto replacement = new DockableSidebar(this, sidebar->m_sidebarPos, sidebar->m_contentView,
                                                    sidebar->parentWidget());
-            replacement->ClearTypes();
-            for (auto type: sidebar->m_containedTypes)
-                replacement->AddType(type);
             replacement->UpdateForTypes();
             m_sidebarForPos[sidebar->m_sidebarPos] = replacement;
             sidebar->parentWidget()->layout()->replaceWidget(sidebar, replacement);
@@ -606,7 +588,8 @@ void DockableSidebarContentView::ActivateWidgetType(SidebarWidgetType *type, boo
 #ifdef THEME_BUILD
     if (widg)
     {
-        widg->connect(widg->m_contextMenuManager, &ContextMenuManager::onOpen, m_topContents, [widg=widg](){
+
+        widg->connect(widg->m_contextMenuManager, &ContextMenuManager::onOpen, top ? m_topContents : m_bottomContents, [widg=widg](){
             auto pos = widg->m_contextMenuManager->m_menu->pos();
             // save the pos, we already popped up but we tried to make it transparent
             widg->m_contextMenuManager->m_menu->setWindowFlag(Qt::FramelessWindowHint, true);
@@ -723,6 +706,39 @@ DockableSidebar::DockableSidebar(ContextSidebarManager *context, SidebarPos pos,
           m_contentView(contentView)
 {
     setParent(parent);
+    
+    if (!context->m_settings->contains("SidebarTypes-" + sidebarPosToString(pos)))
+    {
+        switch (pos)
+        {
+            case TopLeft:
+            {
+                QStringList types = {"Symbols", "Types", "Strings"};
+                context->m_settings->setValue("SidebarTypes-" + sidebarPosToString(pos), types);
+                break;
+            }
+            case TopRight:
+            {
+                QStringList types = {"Variables", "Stack", "Memory Map"};
+                context->m_settings->setValue("SidebarTypes-" + sidebarPosToString(pos), types);
+                break;
+            }
+            case BottomLeft:
+            {
+                QStringList types = {"Cross References", "Mini Graph"};
+                context->m_settings->setValue("SidebarTypes-" + sidebarPosToString(pos), types);
+                break;
+            }
+            case BottomRight:
+            {
+                QStringList types = {"Tags"};
+                context->m_settings->setValue("SidebarTypes-" + sidebarPosToString(pos), types);
+                break;
+            }
+            default:
+                abort();
+        }
+    }
 
     QPalette pal = palette();
     pal.setColor(QPalette::Window, getThemeColor(SidebarBackgroundColor));
@@ -750,6 +766,25 @@ DockableSidebar::DockableSidebar(ContextSidebarManager *context, SidebarPos pos,
 
     }
     setFixedWidth(30);
+}
+
+std::vector<SidebarWidgetType*> DockableSidebar::GetTypes(bool includeUnassigned)
+{
+    std::vector<SidebarWidgetType*> types;
+    QStringList typeNames = m_context->m_settings->value("SidebarTypes-" + sidebarPosToString(m_sidebarPos)).toStringList();
+    if (m_sidebarPos == TopLeft && includeUnassigned)
+    {
+        auto extraTypeNames = m_context->UnassignedWidgetTypes();
+        for (const auto& name : extraTypeNames)
+            typeNames.push_back(QString::fromStdString(name));
+    }
+    for (const auto& name : typeNames)
+    {
+        auto type = m_context->TypeForName(name.toStdString());
+        if (type)
+            types.push_back(type);
+    }
+    return types;
 }
 
 void DockableSidebar::dragEnterEvent(QDragEnterEvent *event)
@@ -816,7 +851,7 @@ void DockableSidebar::UpdateForTypes()
     setLayout(m_layout);
 
     size_t i = 0;
-    for (auto type: m_containedTypes)
+    for (auto type: GetTypes())
     {
         if (auto extendedType = dynamic_cast<SidebarWidgetTypeExtended*>(type))
         {
@@ -926,3 +961,19 @@ void DockableSidebar::HighlightActiveButton()
     }
 }
 
+QString sidebarPosToString(SidebarPos pos)
+{
+    switch (pos)
+    {
+        case TopLeft:
+            return "TopLeft";
+        case TopRight:
+            return "TopRight";
+        case BottomLeft:
+            return "BottomLeft";
+        case BottomRight:
+            return "BottomRight";
+        default:
+            return "Unk";
+    }
+}
