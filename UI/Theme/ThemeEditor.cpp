@@ -532,10 +532,10 @@ std::string ThemeEditor::GenerateThemeText()
 ThemeEditor::ThemeEditor(QWidget* parent)
 	: QDialog(parent)
 {
-	m_settings = new QSettings("ksuite.theme");
+	m_settings = new QSettings("ksuite.customTheme");
 	if (!m_settings->contains("window"))
 	{
-		QColor base(36, 39, 58);
+		QColor base(43, 46, 56);
 		QColor text(202, 211, 245);
 		QColor sky(145, 215, 227);
 		QColor green(166, 218, 149);
@@ -546,8 +546,8 @@ ThemeEditor::ThemeEditor(QWidget* parent)
 		QColor blue(138, 173, 244);
 		QColor surface0(54, 58, 79);
 		QColor surface2(91, 96, 120);
-		QColor mantle(30, 32, 48);
-		QColor crust(24, 25, 38);
+		QColor mantle = base.darker(150);
+		QColor crust = base.darker(190);
 
 		m_settings->setValue("window", base);
 		m_settings->setValue("alternatebase", surface0);
@@ -567,7 +567,6 @@ ThemeEditor::ThemeEditor(QWidget* parent)
 		m_settings->setValue("surface", surface0);
 		m_settings->setValue("dark", mantle);
 		m_settings->setValue("black", crust);
-
 	}
 
 	setFixedWidth(500);
@@ -677,7 +676,7 @@ ThemeEditor::ThemeEditor(QWidget* parent)
 		button->setColor(m_settings->value("lightblue").value<QColor>());
 		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetHighlightTextColor);
 		buttonLayout->addWidget(button);
-		buttonLayout->addWidget(new QLabel("Highlight Text"));
+		buttonLayout->addWidget(new QLabel("Light Blue"));
 		buttonLayout->addStretch();
 		rightSideLayout->addLayout(buttonLayout);
 	}
@@ -772,6 +771,9 @@ void ThemeEditor::UpdateTheme()
 	refreshUserThemes();
 	setActiveTheme("KSUITE-INTERNALTHEME");
 	resetUserThemes();
+	for (auto &widget : QApplication::allWidgets()) {
+		widget->repaint();
+	}
 	parentWidget()->windowHandle()->requestActivate();
 }
 

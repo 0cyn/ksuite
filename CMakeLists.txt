@@ -21,12 +21,13 @@ set(SHAREDCACHE_PLUGIN_SOURCE Views/SharedCache/DSCView.cpp Views/SharedCache/DS
 set(SHAREDCACHE_PLUGIN_UI_SOURCE UI/SharedCache/dscpicker.cpp
         UI/SharedCache/dscpicker.h UI/SharedCache/dscwidget.cpp UI/SharedCache/dscwidget.h )
 
+set(THEME_SOURCE UI/Theme/Flattery.h UI/Theme/ThemeEditor.cpp UI/Theme/ThemeEditor.h UI/Theme/CSSBuilder.cpp UI/Theme/CSSBuilder.h)
+
 set(PLUGIN_SOURCE API/ksuiteapi.h Plugin.cpp Plugin.h)
 set(UI_PLUGIN_SOURCE UI/priv.h
         Tooling/ExportSegmentAsFile/ExportSegment.h UI/Actions/Actions.cpp UI/Actions/Actions.h
         UI/Actions/MultiShortcut.cpp UI/Actions/MultiShortcut.h UI/DockableSidebar.cpp
-        UI/DockableSidebar.h UI/Notifications.cpp UI/Notifications.h UI/priv.h UI/shared.h
-        UI/Theme/Flattery.h UI/Theme/ThemeEditor.cpp UI/Theme/ThemeEditor.h)
+        UI/DockableSidebar.h UI/Notifications.cpp UI/Notifications.h UI/priv.h UI/shared.h)
 
 if(NOT DEFINED THEME_BUILD)
     set(THEME_BUILD ON)
@@ -34,6 +35,7 @@ endif()
 
 if (THEME_BUILD)
     set(PLUGIN_CDEFS ${PLUGIN_CDEFS} THEME_BUILD=1)
+    set(UI_PLUGIN_SOURCE ${UI_PLUGIN_SOURCE} ${THEME_SOURCE})
 endif()
 
 if (XNU_BUILD)
@@ -114,7 +116,7 @@ if (UI_BUILD)
 
 endif()
 
-set(_PLUGIN_SOURCE ${PLUGIN_SOURCE} ${_UI_PLUGIN_SOURCES} UI/Theme/CSSBuilder.cpp UI/Theme/CSSBuilder.h)
+set(_PLUGIN_SOURCE ${PLUGIN_SOURCE} ${_UI_PLUGIN_SOURCES})
 set("${CMAKE_C_FLAGS} -include${PROJECT_SOURCE_DIR}/Prefix.h")
 
 

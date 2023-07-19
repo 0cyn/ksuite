@@ -57,11 +57,6 @@ BINARYNINJAPLUGIN bool UIPluginInit() {
     setActiveTheme("KSUITE-INTERNALTHEME");
 #endif
 
-	PluginCommand::Register("Theme Editor", "Theme Editor", [](BinaryView* view){
-		auto editor = new ThemeEditor(QApplication::activeWindow());
-		editor->show();
-	});
-
     CallgraphToolInit();
 
     return true;
