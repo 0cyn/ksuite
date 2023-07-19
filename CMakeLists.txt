@@ -26,7 +26,7 @@ set(UI_PLUGIN_SOURCE UI/priv.h
         Tooling/ExportSegmentAsFile/ExportSegment.h UI/Actions/Actions.cpp UI/Actions/Actions.h
         UI/Actions/MultiShortcut.cpp UI/Actions/MultiShortcut.h UI/DockableSidebar.cpp
         UI/DockableSidebar.h UI/Notifications.cpp UI/Notifications.h UI/priv.h UI/shared.h
-        UI/theme/Flattery.h)
+        UI/Theme/Flattery.h UI/Theme/ThemeEditor.cpp UI/Theme/ThemeEditor.h)
 
 if(NOT DEFINED THEME_BUILD)
     set(THEME_BUILD ON)
@@ -114,7 +114,7 @@ if (UI_BUILD)
 
 endif()
 
-set(_PLUGIN_SOURCE ${PLUGIN_SOURCE} ${_UI_PLUGIN_SOURCES})
+set(_PLUGIN_SOURCE ${PLUGIN_SOURCE} ${_UI_PLUGIN_SOURCES} UI/Theme/CSSBuilder.cpp UI/Theme/CSSBuilder.h)
 set("${CMAKE_C_FLAGS} -include${PROJECT_SOURCE_DIR}/Prefix.h")
 
 
