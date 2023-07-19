@@ -60,7 +60,7 @@ std::string ThemeEditor::GenerateStyleSheet()
 			->AddSelector("ViewFrame QWidget")
 
 			//crust
-			->AddRule("background", m_settings->value("window").value<QColor>().name().toStdString());
+			->AddRule("background", m_settings->value("black").value<QColor>().name().toStdString());
 
 	builder.CreateNewItem()
 			->AddSelector("SidebarWidgetAndHeader")
@@ -93,12 +93,12 @@ std::string ThemeEditor::GenerateStyleSheet()
 			->AddSelector("SettingsTreeView QWidget QWidget")
 			->AddSelector("SettingsTreeView QWidget")
 			// mantle
-			->AddRule("background-color", "#2a2a2a");
+			->AddRule("background-color", m_settings->value("dark").value<QColor>().name().toStdString());
 	builder.CreateNewItem()
 			->AddSelector("SettingsTreeView QTextEdit")
 			->AddSelector("ScriptingConsoleOutput")
 			//crust
-			->AddRule("background-color", m_settings->value("window").value<QColor>().name().toStdString());
+			->AddRule("background-color", m_settings->value("black").value<QColor>().name().toStdString());
 
 	builder.CreateNewItem()
 			->AddSelector("#remoteBrowser QToolButton")
@@ -117,7 +117,7 @@ std::string ThemeEditor::GenerateStyleSheet()
 	builder.CreateNewItem()
 			->AddSelector("SettingsView QWidget")
 			//crust
-			->AddRule("border", "solid 1px " + m_settings->value("window").value<QColor>().name().toStdString());
+			->AddRule("border", "solid 1px " + m_settings->value("black").value<QColor>().name().toStdString());
 
 	builder.CreateNewItem()
 			->AddSelector("ViewFrame > QWidget")
@@ -427,16 +427,16 @@ std::string ThemeEditor::GenerateThemeText()
 		colors.AddMember("base", m_settings->value("window").value<QColor>().name().toStdString(), doc.GetAllocator());
 		colors.AddMember("text", m_settings->value("text").value<QColor>().name().toStdString(), doc.GetAllocator());
 		colors.AddMember("sky", m_settings->value("highlight").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("green", m_settings->value("text").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("yellow", m_settings->value("text").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("red", m_settings->value("text").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("rosewater", m_settings->value("text").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("lavender", m_settings->value("text").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("blue", m_settings->value("text").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("surface0", m_settings->value("alternatebase").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("surface2", m_settings->value("tooltiptext").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("mantle", m_settings->value("window").value<QColor>().name().toStdString(), doc.GetAllocator());
-		colors.AddMember("crust", m_settings->value("window").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("green", m_settings->value("green").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("yellow", m_settings->value("yellow").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("red", m_settings->value("red").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("rosewater", m_settings->value("lightred").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("lavender", m_settings->value("purple").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("blue", m_settings->value("blue").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("surface0", m_settings->value("surface").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("surface2", m_settings->value("lightsurface").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("mantle", m_settings->value("dark").value<QColor>().name().toStdString(), doc.GetAllocator());
+		colors.AddMember("crust", m_settings->value("black").value<QColor>().name().toStdString(), doc.GetAllocator());
 
 		doc.AddMember("colors", colors, a);
 	}
@@ -533,7 +533,7 @@ ThemeEditor::ThemeEditor(QWidget* parent)
 	: QDialog(parent)
 {
 	m_settings = new QSettings("ksuite.theme");
-	if (!m_settings->contains("crust"))
+	if (!m_settings->contains("window"))
 	{
 		QColor base(36, 39, 58);
 		QColor text(202, 211, 245);
@@ -556,7 +556,17 @@ ThemeEditor::ThemeEditor(QWidget* parent)
 		m_settings->setValue("highlight", sky);
 		m_settings->setValue("highlighttext", base);
 		m_settings->setValue("link", rosewater);
-
+		m_settings->setValue("lightblue", sky);
+		m_settings->setValue("blue", blue);
+		m_settings->setValue("green", green);
+		m_settings->setValue("yellow", yellow);
+		m_settings->setValue("red", red);
+		m_settings->setValue("lightred", rosewater);
+		m_settings->setValue("purple", lavender);
+		m_settings->setValue("lightsurface", surface2);
+		m_settings->setValue("surface", surface0);
+		m_settings->setValue("dark", mantle);
+		m_settings->setValue("black", crust);
 
 	}
 
@@ -569,47 +579,189 @@ ThemeEditor::ThemeEditor(QWidget* parent)
 	auto leftSideLayout = new QVBoxLayout();
 	auto rightSideLayout = new QVBoxLayout();
 
-	auto windowColorButton = new SelectColorButton(this);
-	windowColorButton->setColor(m_settings->value("window").value<QColor>());
-	connect(windowColorButton, &SelectColorButton::colorChanged, this, &ThemeEditor::SetWindowColor);
-	leftSideLayout->addWidget(windowColorButton);
-
-	auto textColorButton = new SelectColorButton(this);
-	textColorButton->setColor(m_settings->value("text").value<QColor>());
-	connect(textColorButton, &SelectColorButton::colorChanged, this, &ThemeEditor::SetTextColor);
-	leftSideLayout->addWidget(textColorButton);
-
-	auto alternateBase = new SelectColorButton(this);
-	alternateBase->setColor(m_settings->value("alternatebase").value<QColor>());
-	connect(alternateBase, &SelectColorButton::colorChanged, this, &ThemeEditor::SetAlternateBaseColor);
-	leftSideLayout->addWidget(alternateBase);
-
-	auto toolTipTextColorButton = new SelectColorButton(this);
-	toolTipTextColorButton->setColor(m_settings->value("tooltiptext").value<QColor>());
-	connect(toolTipTextColorButton, &SelectColorButton::colorChanged, this, &ThemeEditor::SetToolTipTextColor);
-	leftSideLayout->addWidget(toolTipTextColorButton);
-
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("window").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetWindowColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Window"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("text").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetTextColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Text"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("alternatebase").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetAlternateBaseColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Window Secondary"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("tooltiptext").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetToolTipTextColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Tooltip Text"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("highlight").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetHighlightColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Highlight"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("highlighttext").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetHighlightTextColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Highlight Text"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("link").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetLinkColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Link"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("lightsurface").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetLightSurfaceColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Light Surface"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("surface").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetSurfaceColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Surface"));
+		buttonLayout->addStretch();
+		leftSideLayout->addLayout(buttonLayout);
+	}
 	lyt->addLayout(leftSideLayout);
 
-	auto highlightColorButton = new SelectColorButton(this);
-	highlightColorButton->setColor(m_settings->value("highlight").value<QColor>());
-	connect(highlightColorButton, &SelectColorButton::colorChanged, this, &ThemeEditor::SetHighlightColor);
-	rightSideLayout->addWidget(highlightColorButton);
-
-	auto highlightTextColorButton = new SelectColorButton(this);
-	highlightTextColorButton->setColor(m_settings->value("highlighttext").value<QColor>());
-	connect(highlightTextColorButton, &SelectColorButton::colorChanged, this, &ThemeEditor::SetHighlightTextColor);
-	rightSideLayout->addWidget(highlightTextColorButton);
-
-	auto linkColorButton = new SelectColorButton(this);
-	linkColorButton->setColor(m_settings->value("link").value<QColor>());
-	connect(linkColorButton, &SelectColorButton::colorChanged, this, &ThemeEditor::SetLinkColor);
-	rightSideLayout->addWidget(linkColorButton);
-
-	auto lightColorButton = new SelectColorButton(this);
-	lightColorButton->setColor(m_settings->value("light").value<QColor>());
-	connect(lightColorButton, &SelectColorButton::colorChanged, this, &ThemeEditor::SetLightColor);
-	rightSideLayout->addWidget(lightColorButton);
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("lightblue").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetHighlightTextColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Highlight Text"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("blue").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetBlueColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Blue"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("green").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetGreenColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Green"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("yellow").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetYellowColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Yellow"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("red").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetRedColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Red"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("lightred").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetLightRedColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Light Red"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("purple").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetPurpleColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Purple"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	/*
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("dark").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetDarkColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Dark"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}
+	{
+		auto buttonLayout = new QHBoxLayout();
+		auto button = new SelectColorButton(this);
+		button->setColor(m_settings->value("black").value<QColor>());
+		connect(button, &SelectColorButton::colorChanged, this, &ThemeEditor::SetBlackColor);
+		buttonLayout->addWidget(button);
+		buttonLayout->addWidget(new QLabel("Black"));
+		buttonLayout->addStretch();
+		rightSideLayout->addLayout(buttonLayout);
+	}*/
 
 	lyt->addLayout(rightSideLayout);
 }
@@ -626,6 +778,8 @@ void ThemeEditor::UpdateTheme()
 void ThemeEditor::SetWindowColor(const QColor& color)
 {
 	m_settings->setValue("window", color);
+	m_settings->setValue("dark", color.darker(150));
+	m_settings->setValue("black", color.darker(190));
 	UpdateTheme();
 }
 void ThemeEditor::SetAlternateBaseColor(const QColor& color)
@@ -658,8 +812,59 @@ void ThemeEditor::SetLinkColor(const QColor& color)
 	m_settings->setValue("link", color);
 	UpdateTheme();
 }
-void ThemeEditor::SetLightColor(const QColor& color)
+void ThemeEditor::SetLightBlueColor(const QColor& color)
 {
-	m_settings->setValue("light", color);
+	m_settings->setValue("lightblue", color);
+	UpdateTheme();
+}
+
+void ThemeEditor::SetBlueColor(const QColor& color)
+{
+	m_settings->setValue("blue", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetGreenColor(const QColor& color)
+{
+	m_settings->setValue("green", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetYellowColor(const QColor& color)
+{
+	m_settings->setValue("yellow", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetRedColor(const QColor& color)
+{
+	m_settings->setValue("red", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetLightRedColor(const QColor& color)
+{
+	m_settings->setValue("lightred", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetPurpleColor(const QColor& color)
+{
+	m_settings->setValue("purple", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetLightSurfaceColor(const QColor& color)
+{
+	m_settings->setValue("lightsurface", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetSurfaceColor(const QColor& color)
+{
+	m_settings->setValue("surface", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetDarkColor(const QColor& color)
+{
+	m_settings->setValue("dark", color);
+	UpdateTheme();
+}
+void ThemeEditor::SetBlackColor(const QColor& color)
+{
+	m_settings->setValue("black", color);
 	UpdateTheme();
 }

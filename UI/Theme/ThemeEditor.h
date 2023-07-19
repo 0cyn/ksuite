@@ -65,7 +65,17 @@ public:
 	void SetHighlightColor(const QColor& color);
 	void SetHighlightTextColor(const QColor& color);
 	void SetLinkColor(const QColor& color);
-	void SetLightColor(const QColor& color);
+	void SetLightBlueColor(const QColor& color);
+	void SetBlueColor(const QColor& color);
+	void SetGreenColor(const QColor& color);
+	void SetYellowColor(const QColor& color);
+	void SetRedColor(const QColor& color);
+	void SetLightRedColor(const QColor& color);
+	void SetPurpleColor(const QColor& color);
+	void SetLightSurfaceColor(const QColor& color);
+	void SetSurfaceColor(const QColor& color);
+	void SetDarkColor(const QColor& color);
+	void SetBlackColor(const QColor& color);
 
 
 };
