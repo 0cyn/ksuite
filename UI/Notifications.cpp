@@ -6,6 +6,7 @@
 #include <QLayout>
 #include <QApplication>
 #include <ksuiteapi.h>
+#include <QMainWindow>
 #include "ui/sidebar.h"
 #include <ui/viewframe.h>
 #include "DockableSidebar.h"
@@ -13,6 +14,7 @@
 #include "binaryninja-api/ui/linearview.h"
 #include "Actions/MultiShortcut.h"
 #include "Actions/Actions.h"
+#include "UI/Theme/ThemeEditor.h"
 
 Notifications* Notifications::m_instance = nullptr;
 
@@ -68,6 +70,16 @@ void Notifications::OnContextOpen(UIContext* context)
         }
     }
     RegisterActions(context);
+
+	auto menu = new QMenu("&KSuite");
+#ifdef THEME_BUILD
+	menu->addAction("Theme Editor", [](){
+		auto editor = new ThemeEditor(QApplication::activeWindow());
+		editor->show();
+	});
+#endif
+	context->mainWindow()->menuBar()->addMenu(menu);
+
     /*
     context->mainWindow()->setStyleSheet(context->mainWindow()->styleSheet() + "LinearView QMenu, SidebarWidget QMenu "
                                                                                "{ "

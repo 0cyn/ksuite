@@ -9,7 +9,8 @@
 #ifdef UI_BUILD
 #include "binaryninja-api/ui/uitypes.h"
 #include "UI/Notifications.h"
-#include "UI/theme/Flattery.h"
+#include "UI/Theme/Flattery.h"
+#include "UI/Theme/ThemeEditor.h"
 #include "UI/Callgraph/Callgraph.h"
 #include "Tooling/ExportSegmentAsFile/ExportSegment.h"
 #ifdef NOTEPAD_BUILD
@@ -50,9 +51,10 @@ BINARYNINJAPLUGIN bool UIPluginInit() {
     NotepadNotifications::init();
 #endif
 #ifdef THEME_BUILD
-    addJsonTheme(flatteryJson.c_str());
+	ThemeEditor editor;
+    addJsonTheme(editor.GenerateThemeText().c_str());
     refreshUserThemes();
-    setActiveTheme("Flattery - Dark");
+    setActiveTheme("KSUITE-INTERNALTHEME");
 #endif
 
     CallgraphToolInit();
